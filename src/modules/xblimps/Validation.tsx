@@ -1,8 +1,29 @@
 import React, { useState } from 'react'
 import { store } from '../../lib/store'
-import type { MinimalPair } from '../../lib/types'
+import type { MinimalPair, Source } from '../../lib/types'
 import { Panel } from '../../components/ui'
 import { perturbationLabel, perturbationHue } from '../../lib/perturbations'
+import { toBibtex } from '../../lib/bibtex'
+import { backupToHuggingFace } from '../../lib/hf'
+
+// the reference-grammar sources cited by the templates behind a set of pairs
+function citedSources(pairs: MinimalPair[]): Source[] {
+  const tplIds = new Set(pairs.map((p) => p.template_id))
+  const srcIds = new Set<string>()
+  store.db.templates.filter((t) => tplIds.has(t.id)).forEach((t) => t.citations.forEach((c) => srcIds.add(c.source_id)))
+  return store.db.sources.filter((s) => srcIds.has(s.id))
+}
+
+// a compact "Author (Year)" citation string for a pair, via its template
+function citationLabel(p: MinimalPair): string {
+  const tpl = store.db.templates.find((t) => t.id === p.template_id)
+  if (!tpl) return ''
+  return tpl.citations.map((c) => {
+    const s = store.db.sources.find((x) => x.id === c.source_id)
+    if (!s) return ''
+    return `${s.author.split(' and ')[0].split(',')[0]} ${s.year}${c.page ? `:${c.page}` : ''}`
+  }).filter(Boolean).join('; ')
+}
 
 function download(name: string, content: string, type = 'text/plain') {
   const blob = new Blob([content], { type })
@@ -24,7 +45,8 @@ function toCSV(pairs: MinimalPair[]) {
 function toCoNLLU(pairs: MinimalPair[]) {
   return pairs.map((p, i) => {
     const pe = p.perturbation
-    const meta = `# sent_id = ${p.id}\n# text = ${p.sentence_good}\n# phenomenon = ${p.phenomenon_id}\n# minimalist_parse = ${p.parse_good || '_'}\n# features = ${Object.entries(p.features || {}).map(([k, v]) => `${k}=${v}`).join('|') || '_'}\n# perturbation = ${pe ? `${pe.type}|target=${pe.target}|depth=${pe.depth}` : '_'}`
+    const cite = citationLabel(p)
+    const meta = `# sent_id = ${p.id}\n# text = ${p.sentence_good}\n# phenomenon = ${p.phenomenon_id}\n# minimalist_parse = ${p.parse_good || '_'}\n# features = ${Object.entries(p.features || {}).map(([k, v]) => `${k}=${v}`).join('|') || '_'}\n# perturbation = ${pe ? `${pe.type}|target=${pe.target}|depth=${pe.depth}` : '_'}\n# reference = ${cite || '_'}`
     const body = p.conll?.trim()
       ? p.conll.trim()
       : p.sentence_good.replace(/[.?!]$/, '').split(/\s+/).map((w, j) =>
@@ -39,7 +61,7 @@ function toJSON(pairs: MinimalPair[]) {
     sentence_good: p.sentence_good, sentence_bad: p.sentence_bad, contrast_tokens: p.contrast_tokens,
     minimalist_parse_good: p.parse_good, minimalist_parse_bad: p.parse_bad, gloss: p.gloss,
     conllu: p.conll, features: p.features, feature_contrast: p.feature_contrast,
-    perturbation: p.perturbation, status: p.status,
+    perturbation: p.perturbation, reference: citationLabel(p), status: p.status,
   })), null, 2)
 }
 
@@ -58,6 +80,17 @@ export default function Validation({ language }: { language: string }) {
   const featural = all.filter((p) => p.paradigm === 'featural')
   const [n, setN] = useState(50)
   const [preview, setPreview] = useState('')
+  const [backup, setBackup] = useState<{ busy: boolean; msg: string; ok?: boolean }>({ busy: false, msg: '' })
+
+  const runBackup = async () => {
+    setBackup({ busy: true, msg: 'Mirroring all templates, pairs & metadata to HuggingFace…' })
+    try {
+      const r = await backupToHuggingFace()
+      if (!r.ok) { setBackup({ busy: false, ok: false, msg: r.error || 'Backup failed' }); return }
+      const total = Object.values(r.counts || {}).reduce((a, b) => a + b, 0)
+      setBackup({ busy: false, ok: true, msg: `✓ Backed up ${total} records to ${(r.datasets || []).length} private dataset(s)${r.user ? ` as ${r.user}` : ''}.` })
+    } catch (e: any) { setBackup({ busy: false, ok: false, msg: e?.message || 'Network error' }) }
+  }
 
   const sample = () => {
     // stratified by phenomenon
@@ -75,6 +108,7 @@ export default function Validation({ language }: { language: string }) {
     { t: 'CoNLL-U', d: 'Dependency annotation + Minimalist parse + features in comments — grammar induction & acquisition models', go: () => download(`xblimps_${language}.conllu`, toCoNLLU(accepted)) },
     { t: 'JSON (rich)', d: 'Full records incl. Minimalist parses, gloss, feature bundles', go: () => download(`xblimps_${language}.json`, toJSON(accepted), 'application/json') },
     { t: 'Prolific batch', d: 'Stratified grammaticality + naturalness sample', go: () => { const s = sample(); download(`prolific_${language}.csv`, toProlific(s), 'text/csv') } },
+    { t: 'References (.bib)', d: 'BibTeX for every reference grammar cited by accepted pairs', go: () => download(`xblimps_${language}.bib`, toBibtex(citedSources(accepted))) },
   ]
 
   return (
@@ -111,6 +145,20 @@ export default function Validation({ language }: { language: string }) {
           <input className="field" type="number" style={{ width: 100 }} value={n} onChange={(e) => setN(+e.target.value)} />
         </div>
       </Panel>
+
+      <div className="card between" style={{ marginBottom: 20, alignItems: 'center' }}>
+        <div>
+          <div style={{ fontWeight: 600 }}>Back up everything to HuggingFace</div>
+          <div className="muted" style={{ fontSize: 13 }}>
+            Mirrors the <b>entire project</b> — all languages' templates, minimal pairs, phenomena, sources,
+            notes and the audit ledger — to private datasets under the xBLiMPs org. Zero information loss.
+          </div>
+          {backup.msg && <div style={{ fontSize: 13, marginTop: 6, color: backup.ok === false ? 'var(--bad, #c0392b)' : 'var(--ink-soft)' }}>{backup.msg}</div>}
+        </div>
+        <button className="btn btn-primary" disabled={backup.busy} onClick={runBackup}>
+          {backup.busy ? 'Backing up…' : 'Back up now'}
+        </button>
+      </div>
 
       <h2 className="section">Exports</h2>
       <div className="grid grid-2">

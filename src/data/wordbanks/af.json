@@ -1,0 +1,26 @@
+{
+  "language": "af",
+  "source": "SEED — replace with CC100/OSCAR/CulturaX extraction (af). A flat corpus pool used for lexical/topic priming, NOT slot filling — sampled sentences need not match the phenomenon.",
+  "sentences": [
+    { "text": "Die hond hardloop.", "length": 3 },
+    { "text": "Die kat slaap.", "length": 3 },
+    { "text": "Sy loop stadig.", "length": 3 },
+    { "text": "Die kinders hardloop.", "length": 3 },
+    { "text": "Ek lees graag.", "length": 3 },
+    { "text": "Die skool is groot.", "length": 4 },
+    { "text": "Ek lees 'n boek.", "length": 4 },
+    { "text": "Die huis is wit.", "length": 4 },
+    { "text": "Die kos is warm.", "length": 4 },
+    { "text": "Pieter loop skool toe.", "length": 4 },
+    { "text": "Sanet lees die boek.", "length": 4 },
+    { "text": "Johan hardloop huis toe.", "length": 4 },
+    { "text": "Hulle sing 'n lied.", "length": 4 },
+    { "text": "Die hond is groot.", "length": 4 },
+    { "text": "Die huis is klein.", "length": 4 },
+    { "text": "Die boek is rooi.", "length": 4 },
+    { "text": "Die groot hond hardloop na die skool.", "length": 7 },
+    { "text": "Pieter en Sanet lees die rooi boek.", "length": 7 },
+    { "text": "Die kinders sing 'n lied in die huis.", "length": 8 },
+    { "text": "Johan en Sanet loop elke dag saam skool toe.", "length": 9 }
+  ]
+}

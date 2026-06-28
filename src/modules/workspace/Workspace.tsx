@@ -12,6 +12,8 @@ import Phenomena from '../xblimps/Phenomena'
 import Templates from '../xblimps/Templates'
 import CardFlow from '../xblimps/CardFlow'
 import Validation from '../xblimps/Validation'
+import Overview from '../xblimps/Overview'
+import { stageState, furthestUnlocked, type StageKey } from '../../lib/stages'
 
 function Settings({ ws, onClose }: { ws: WS; onClose: () => void }) {
   return (
@@ -34,17 +36,31 @@ export default function WorkspaceView({ workspaceId, section, onSection }: { wor
   if (!ws) return <div className="empty"><div className="big">📭</div>Select a workspace.</div>
 
   const lang = ws.language ?? ''
+  const isLang = ws.kind === 'language'
+
+  // for language projects the rail drives a gated stage sequence; keep users out of
+  // a locked or stale section by falling back to the furthest unlocked working stage
+  let active = section
+  if (isLang) {
+    const st = stageState(lang)
+    const map: Record<string, StageKey> = { Templates: 'Template Studio', Validation: 'Export', Dashboard: 'Overview' }
+    const key = (map[active] ?? active) as StageKey
+    if (st.unlocked[key] === false) active = furthestUnlocked(st)
+    else active = key
+  }
+
   const render = () => {
-    switch (section) {
+    switch (active) {
+      case 'Overview': return <Overview ws={ws} />
       case 'Dashboard': return <Dashboard ws={ws} />
       case 'Notes': return <Notes workspaceId={ws.id} />
       case 'Tasks': return <Tasks workspaceId={ws.id} />
       case 'Files': return <Files workspaceId={ws.id} />
       case 'Calendar': return <Calendar workspaceId={ws.id} />
       case 'Phenomena': return <Phenomena language={lang} onOpen={onSection} />
-      case 'Templates': return <Templates language={lang} />
+      case 'Template Studio': case 'Templates': return <Templates language={lang} />
       case 'Card flow': return <CardFlow language={lang} />
-      case 'Validation': return <Validation language={lang} />
+      case 'Export': case 'Validation': return <Validation language={lang} />
       default: return <Dashboard ws={ws} />
     }
   }
@@ -62,16 +78,19 @@ export default function WorkspaceView({ workspaceId, section, onSection }: { wor
         <button className="btn btn-ghost" onClick={openSettings}>⚙ Customise</button>
       </div>
 
-      <div className="row" style={{ gap: 4, margin: '18px 0 24px', borderBottom: '1px solid var(--hair)', flexWrap: 'wrap' }}>
-        {ws.sections.map((s) => (
-          <button key={s} className="btn btn-ghost btn-sm" onClick={() => onSection(s)}
-            style={{ borderRadius: 0, borderBottom: section === s ? `2px solid ${ws.colour}` : '2px solid transparent', color: section === s ? 'var(--ink)' : 'var(--ink-soft)', fontWeight: section === s ? 600 : 500 }}>
-            {s}
-          </button>
-        ))}
-      </div>
+      {/* language projects are driven by the guided rail; notebooks keep their tab bar */}
+      {!isLang && (
+        <div className="row" style={{ gap: 4, margin: '18px 0 24px', borderBottom: '1px solid var(--hair)', flexWrap: 'wrap' }}>
+          {ws.sections.map((s) => (
+            <button key={s} className="btn btn-ghost btn-sm" onClick={() => onSection(s)}
+              style={{ borderRadius: 0, borderBottom: section === s ? `2px solid ${ws.colour}` : '2px solid transparent', color: section === s ? 'var(--ink)' : 'var(--ink-soft)', fontWeight: section === s ? 600 : 500 }}>
+              {s}
+            </button>
+          ))}
+        </div>
+      )}
 
-      {render()}
+      <div style={{ marginTop: isLang ? 24 : 0 }}>{render()}</div>
       {settings && <Settings ws={ws} onClose={closeSettings} />}
     </div>
   )

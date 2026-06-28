@@ -1,0 +1,26 @@
+{
+  "language": "cy",
+  "source": "SEED — replace with CC100/OSCAR/CulturaX extraction (cy). A flat corpus pool used for lexical/topic priming, NOT slot filling — sampled sentences need not match the phenomenon.",
+  "sentences": [
+    { "text": "Mae'r ysgol yn fawr.", "length": 4 },
+    { "text": "Mae'r ci yn rhedeg.", "length": 4 },
+    { "text": "Mae'r gath yn cysgu.", "length": 4 },
+    { "text": "Dw i'n darllen llyfr.", "length": 4 },
+    { "text": "Mae'r tŷ yn wyn.", "length": 4 },
+    { "text": "Maen nhw'n canu.", "length": 3 },
+    { "text": "Rhedodd Dafydd adref.", "length": 3 },
+    { "text": "Canodd Sara gân.", "length": 3 },
+    { "text": "Mae hi'n cerdded.", "length": 3 },
+    { "text": "Mae'r bwyd yn boeth.", "length": 4 },
+    { "text": "Mae'r afon yn hir.", "length": 4 },
+    { "text": "Cerddodd Aled i'r ysgol.", "length": 4 },
+    { "text": "Darllenodd Mair y llyfr.", "length": 4 },
+    { "text": "Gwelodd Elin y gath.", "length": 4 },
+    { "text": "Mae'r plant yn rhedeg.", "length": 4 },
+    { "text": "Mae'r gath fach yn cysgu yn y tŷ.", "length": 8 },
+    { "text": "Mae'r plant yn rhedeg i'r ysgol bob dydd.", "length": 8 },
+    { "text": "Darllenodd Aled y llyfr coch yn yr ysgol.", "length": 8 },
+    { "text": "Gwelodd Sara y ci mawr ger yr afon.", "length": 8 },
+    { "text": "Aeth Mair a Dafydd i'r dref i brynu bwyd ddoe.", "length": 10 }
+  ]
+}

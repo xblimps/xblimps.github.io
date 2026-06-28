@@ -1,0 +1,24 @@
+{
+  "language": "tl",
+  "source": "SEED — replace with CC100/OSCAR/CulturaX extraction (tl). A flat corpus pool used for lexical/topic priming, NOT slot filling — sampled sentences need not match the phenomenon.",
+  "sentences": [
+    { "text": "Malaki ang paaralan.", "length": 3 },
+    { "text": "Tumakbo ang aso.", "length": 3 },
+    { "text": "Natutulog ang pusa.", "length": 3 },
+    { "text": "Puti ang bahay.", "length": 3 },
+    { "text": "Mainit ang pagkain.", "length": 3 },
+    { "text": "Malaki ang aso.", "length": 3 },
+    { "text": "Maliit ang bahay.", "length": 3 },
+    { "text": "Binabasa ko ang libro.", "length": 4 },
+    { "text": "Tumakbo si Jose pauwi.", "length": 4 },
+    { "text": "Lumakad siya nang mabagal.", "length": 4 },
+    { "text": "Tumakbo ang mga bata.", "length": 4 },
+    { "text": "Kumain sila ng pagkain.", "length": 4 },
+    { "text": "Lumakad si Juan papuntang paaralan.", "length": 5 },
+    { "text": "Binasa ni Maria ang libro.", "length": 5 },
+    { "text": "Kumain ang mga bata ng pagkain sa bahay.", "length": 8 },
+    { "text": "Binasa ni Maria ang malaking libro sa paaralan.", "length": 8 },
+    { "text": "Tumakbo si Juan papuntang paaralan kasama ang aso.", "length": 8 },
+    { "text": "Lumakad nang mabagal ang maliit na pusa papunta sa bahay.", "length": 10 }
+  ]
+}

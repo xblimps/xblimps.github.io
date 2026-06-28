@@ -1,10 +1,16 @@
+// Card flow — pair CONSTRUCTION. A template is instantiated and its full analysis (parse,
+// CoNLL-U, gloss, feature contrast, perturbation) is auto-derived from the template's authored
+// schemas. The annotator's job is fast judgment: Accept / Edit / Reject + a naturalness rating.
+// The derived analysis is shown read-only; an "override" affordance lets a specific instance
+// hand-edit a field when needed (recorded in `overrides` so it isn't a template-wide change).
+
 import React, { useEffect, useMemo, useState } from 'react'
 import { store, ident } from '../../lib/store'
-import type { MinimalPair, Phenomenon, Template } from '../../lib/types'
+import type { MinimalPair, Template } from '../../lib/types'
 import { uid } from '../../lib/id'
 import { Ring, Modal, Panel, Field } from '../../components/ui'
-import { PERTURBATION_TYPES, perturbationHue } from '../../lib/perturbations'
-import type { Perturbation } from '../../lib/types'
+import { perturbationHue, perturbationLabel } from '../../lib/perturbations'
+import { expandTemplate, derivePair } from '../../lib/derive'
 
 const RTL = new Set(['fa'])
 
@@ -29,17 +35,6 @@ function highlight(sentence: string, tokens: string[], rtl: boolean) {
   )
 }
 
-// expand a template into a candidate pair
-function expand(tpl: Template, pick: number): { good: string; bad: string; tokens: string[]; fillers: Record<string, string> } {
-  const fillers: Record<string, string> = {}
-  tpl.slots.forEach((s) => { fillers[s.name] = s.fillers[pick % s.fillers.length] || s.fillers[0] || s.name })
-  const fill = (pat: string) => pat.replace(/\{(\w+)\}/g, (_, k) => fillers[k] ?? `{${k}}`)
-  const good = fill(tpl.grammatical)
-  const bad = fill(tpl.ungrammatical).replace('*', '')
-  const tokens = Object.values(fillers).filter(Boolean).slice(0, 2)
-  return { good, bad, tokens, fillers }
-}
-
 export default function CardFlow({ language }: { language: string }) {
   const phen = store.db.phenomena.filter((p) => p.language === language)
   const [phenId, setPhenId] = useState(phen.find((p) => p.status === 'active')?.id ?? phen[0]?.id ?? '')
@@ -55,54 +50,59 @@ export default function CardFlow({ language }: { language: string }) {
   const rtl = RTL.has(language)
 
   const [seed, setSeed] = useState(0)
-  const cand = useMemo(() => tpl ? expand(tpl, seed) : null, [tpl, seed])
   const [flash, setFlash] = useState(false)
   const [editing, setEditing] = useState(false)
   const [eGood, setEGood] = useState(''); const [eBad, setEBad] = useState('')
-  const [parseG, setParseG] = useState(''); const [parseB, setParseB] = useState(''); const [gloss, setGloss] = useState('')
-  const [conll, setConll] = useState(''); const [featContrast, setFeatContrast] = useState(''); const [featBundle, setFeatBundle] = useState('')
-  const [paradigm, setParadigm] = useState<'lexical' | 'featural'>('lexical')
-  const [pert, setPert] = useState<Perturbation>({ type: 'agreement_flip', target: 'nsubj↔root', relation: '', depth: 0, description: '' })
+  const [naturalness, setNaturalness] = useState(0)
+  const [showAnalysis, setShowAnalysis] = useState(true)
+  // per-instance overrides of derived analysis fields
+  const [over, setOver] = useState<Partial<Pick<MinimalPair, 'parse_good' | 'parse_bad' | 'gloss' | 'conll' | 'feature_contrast'>>>({})
 
-  if (!tpl || !cand) {
-    return <div className="empty"><div className="big">🃏</div>No template for this phenomenon yet. Build one in the Templates tab.</div>
+  // derived snapshot for the current instantiation (template analysis + fillers)
+  const derived = useMemo(() => tpl ? derivePair(tpl, expandTemplate(tpl, seed)) : null, [tpl, seed])
+
+  if (!tpl || !derived) {
+    return <div className="empty"><div className="big">🃏</div>No template for this phenomenon yet. Author one in Template Studio.</div>
   }
 
-  const parseFeatures = (s: string): Record<string, string> => {
-    const out: Record<string, string> = {}
-    s.split(/[,;]/).map((p) => p.trim()).filter(Boolean).forEach((p) => {
-      const [k, v] = p.split('=').map((x) => x.trim()); if (k) out[k] = v ?? 'Yes'
-    })
-    return out
-  }
+  // effective analysis = derived ⊕ overrides
+  const eff = { ...derived, ...over }
+  const overrides = Object.keys(over)
 
-  const commit = (status: MinimalPair['status'], good = cand.good, bad = cand.bad) => {
+  const resetCard = () => { setOver({}); setNaturalness(0); setSeed((s) => s + 1) }
+
+  const commit = (status: MinimalPair['status'], good = eff.sentence_good, bad = eff.sentence_bad) => {
     const pair: MinimalPair = {
       ...ident(), id: uid(), language, phenomenon_id: phenId, template_id: tpl.id,
-      sentence_good: good, sentence_bad: bad, contrast_tokens: cand.tokens,
-      parse_good: parseG, parse_bad: parseB, gloss, conll,
-      features: parseFeatures(featBundle), feature_contrast: featContrast, paradigm,
-      perturbation: pert,
-      fillers: cand.fillers, author: store.db.session.user, status, notes: '',
+      sentence_good: good, sentence_bad: bad, contrast_tokens: eff.contrast_tokens,
+      parse_good: eff.parse_good, parse_bad: eff.parse_bad, gloss: eff.gloss, conll: eff.conll,
+      features: eff.features, feature_contrast: eff.feature_contrast, paradigm: eff.paradigm,
+      perturbation: eff.perturbation, fillers: eff.fillers,
+      overrides: overrides.length ? overrides : undefined,
+      author: store.db.session.user, status,
+      naturalness_score: naturalness || undefined, notes: '',
     }
     store.upsert('pairs', pair)
     if (status === 'accepted' || status === 'edited') { setFlash(true); setTimeout(() => setFlash(false), 400) }
-    setParseG(''); setParseB(''); setGloss(''); setConll(''); setFeatContrast(''); setFeatBundle('')
-    setSeed((s) => s + 1)
+    resetCard()
   }
 
   // keyboard A / E / R
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
       if (editing) return
+      const t = e.target as HTMLElement
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return
       const k = e.key.toLowerCase()
       if (k === 'a') commit('accepted')
       else if (k === 'r') commit('rejected')
-      else if (k === 'e') { setEGood(cand.good); setEBad(cand.bad); setEditing(true) }
+      else if (k === 'e') { setEGood(eff.sentence_good); setEBad(eff.sentence_bad); setEditing(true) }
     }
     window.addEventListener('keydown', h)
     return () => window.removeEventListener('keydown', h)
-  }, [cand, editing, parseG, parseB, gloss, conll, featContrast, featBundle, paradigm, pert])
+  }, [derived, over, editing, naturalness])
+
+  const phue = perturbationHue(eff.perturbation.type)
 
   return (
     <div className="cardflow">
@@ -116,10 +116,9 @@ export default function CardFlow({ language }: { language: string }) {
               {templates.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
             </select>
           )}
-          <div className="row" style={{ gap: 0, border: '1px solid var(--hair)', borderRadius: 8, overflow: 'hidden' }}>
-            <button className={`btn btn-sm ${paradigm === 'lexical' ? 'btn-accent' : 'btn-ghost'}`} style={{ borderRadius: 0, border: 'none' }} onClick={() => setParadigm('lexical')}>Lexical</button>
-            <button className={`btn btn-sm ${paradigm === 'featural' ? 'btn-accent' : 'btn-ghost'}`} style={{ borderRadius: 0, border: 'none' }} onClick={() => setParadigm('featural')} title="Single-feature contrast for SAE / learning-dynamics analysis">Featural</button>
-          </div>
+          <span className="tag" style={{ background: phue + '18', color: phue, border: 'none' }} title={eff.perturbation.description}>
+            {perturbationLabel(eff.perturbation.type)} · {eff.paradigm}
+          </span>
         </div>
         <div className="row">
           <Ring pct={pct} label={`${accepted.length}`} />
@@ -130,75 +129,69 @@ export default function CardFlow({ language }: { language: string }) {
       <div className={`mp-card ${flash ? 'accept-flash' : ''}`}>
         <div className="mp-alt mp-good">
           <div className="mp-flag">● grammatical</div>
-          {highlight(cand.good, cand.tokens, rtl)}
+          {highlight(eff.sentence_good, eff.contrast_tokens, rtl)}
         </div>
         <div className="mp-alt mp-bad">
           <div className="mp-flag">✗ ungrammatical</div>
-          {highlight(cand.bad, cand.tokens, rtl)}
+          {highlight(eff.sentence_bad, eff.contrast_tokens, rtl)}
         </div>
         <div className="mp-actions">
           <button className="act-btn act-accept" onClick={() => commit('accepted')}><span>Accept</span><span className="act-key">A</span></button>
-          <button className="act-btn act-edit" onClick={() => { setEGood(cand.good); setEBad(cand.bad); setEditing(true) }}><span>Edit</span><span className="act-key">E</span></button>
+          <button className="act-btn act-edit" onClick={() => { setEGood(eff.sentence_good); setEBad(eff.sentence_bad); setEditing(true) }}><span>Edit</span><span className="act-key">E</span></button>
           <button className="act-btn act-reject" onClick={() => commit('rejected')}><span>Reject</span><span className="act-key">R</span></button>
         </div>
       </div>
 
-      {/* fine-grained syntactic perturbation */}
-      <div style={{ marginTop: 16 }}>
-        <Panel hue={perturbationHue(pert.type)} label="Fine-grained perturbation — how bad is derived from good">
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
-            {PERTURBATION_TYPES.map((t) => (
-              <button key={t.id} className="tag" title={t.note}
-                style={{ cursor: 'pointer', background: pert.type === t.id ? t.hue : t.hue + '18', color: pert.type === t.id ? '#fff' : t.hue, border: 'none' }}
-                onClick={() => setPert({ ...pert, type: t.id, target: t.defaultTarget })}>{t.label}</button>
-            ))}
-          </div>
-          <div className="grid grid-3" style={{ gap: 8 }}>
-            <input className="field mono" style={{ fontSize: 12 }} placeholder="target node / relation" value={pert.target} onChange={(e) => setPert({ ...pert, target: e.target.value })} />
-            <input className="field mono" style={{ fontSize: 12 }} placeholder="affected edge head→dep" value={pert.relation} onChange={(e) => setPert({ ...pert, relation: e.target.value })} />
-            <input className="field mono" style={{ fontSize: 12 }} type="number" placeholder="embedding depth" value={pert.depth} onChange={(e) => setPert({ ...pert, depth: +e.target.value })} />
-          </div>
-          <input className="field" style={{ marginTop: 8, fontSize: 13 }} placeholder="Description of the structural edit…" value={pert.description} onChange={(e) => setPert({ ...pert, description: e.target.value })} />
-        </Panel>
+      {/* naturalness rating */}
+      <div className="row" style={{ justifyContent: 'center', gap: 8, marginTop: 14 }}>
+        <span className="faint" style={{ fontSize: 12.5 }}>Naturalness</span>
+        {[1, 2, 3, 4, 5].map((n) => (
+          <button key={n} className={`btn btn-sm ${naturalness >= n ? 'btn-accent' : 'btn-ghost'}`} style={{ minWidth: 30 }} onClick={() => setNaturalness(n === naturalness ? 0 : n)}>{n}</button>
+        ))}
       </div>
 
-      {/* annotation quality: pastel panels for Minimalist parses + gloss + CoNLL + features */}
-      {paradigm === 'featural' && (
-        <div className="grid grid-2" style={{ marginTop: 16 }}>
-          <Panel hue="#185FA5" label="Contrastive feature (single-feature minimal pair)">
-            <input className="field" style={{ background: 'transparent', border: 'none', fontFamily: 'var(--font-mono)', fontSize: 12.5 }}
-              placeholder="Number — the one feature that flips good→bad" value={featContrast} onChange={(e) => setFeatContrast(e.target.value)} />
-          </Panel>
-          <Panel hue="#0F6E56" label="Feature bundle  (key=val, …)">
-            <input className="field" style={{ background: 'transparent', border: 'none', fontFamily: 'var(--font-mono)', fontSize: 12.5 }}
-              placeholder="Number=Plur, Person=3, Definite=Yes" value={featBundle} onChange={(e) => setFeatBundle(e.target.value)} />
-          </Panel>
-        </div>
+      {/* auto-derived analysis (read-only, overridable) */}
+      <div className="between" style={{ margin: '18px 0 8px' }}>
+        <div className="eyebrow">Analysis — auto-derived from template{overrides.length ? ` · ${overrides.length} override${overrides.length > 1 ? 's' : ''}` : ''}</div>
+        <button className="btn btn-ghost btn-sm" onClick={() => setShowAnalysis((v) => !v)}>{showAnalysis ? 'Hide' : 'Show'}</button>
+      </div>
+
+      {showAnalysis && (
+        <>
+          <div className="grid grid-2">
+            <Panel hue="#1D9E75" label="Minimalist parse — grammatical">
+              <input className="field mono" style={{ background: over.parse_good != null ? 'var(--contrast-bg)' : 'transparent', border: 'none', fontSize: 12.5 }}
+                value={eff.parse_good} onChange={(e) => setOver({ ...over, parse_good: e.target.value })} />
+            </Panel>
+            <Panel hue="#D85A30" label="Minimalist parse — ungrammatical">
+              <input className="field mono" style={{ background: over.parse_bad != null ? 'var(--contrast-bg)' : 'transparent', border: 'none', fontSize: 12.5 }}
+                value={eff.parse_bad} onChange={(e) => setOver({ ...over, parse_bad: e.target.value })} />
+            </Panel>
+          </div>
+          <div className="grid grid-2" style={{ marginTop: 12 }}>
+            <Panel hue="#534AB7" label="Interlinear gloss">
+              <input className="field mono" style={{ background: over.gloss != null ? 'var(--contrast-bg)' : 'transparent', border: 'none', fontSize: 12.5 }}
+                value={eff.gloss} onChange={(e) => setOver({ ...over, gloss: e.target.value })} />
+            </Panel>
+            <Panel hue="#185FA5" label={`Featural contrast · ${eff.paradigm}`}>
+              <div className="mono" style={{ fontSize: 12 }}>
+                <input className="field mono" style={{ background: over.feature_contrast != null ? 'var(--contrast-bg)' : 'transparent', border: 'none', fontSize: 12.5, marginBottom: 4 }}
+                  value={eff.feature_contrast} onChange={(e) => setOver({ ...over, feature_contrast: e.target.value })} />
+                <span className="faint">{Object.entries(eff.features).map(([k, v]) => `${k}=${v}`).join(' | ') || '—'}</span>
+              </div>
+            </Panel>
+          </div>
+          <div style={{ marginTop: 12 }}>
+            <Panel hue="#993C1D" label="CoNLL-U dependency annotation">
+              <textarea className="field mono" rows={3} style={{ background: over.conll != null ? 'var(--contrast-bg)' : 'transparent', border: 'none', fontSize: 11.5, resize: 'vertical' }}
+                value={eff.conll} onChange={(e) => setOver({ ...over, conll: e.target.value })} />
+            </Panel>
+          </div>
+        </>
       )}
-      <div className="grid grid-2" style={{ marginTop: 16 }}>
-        <Panel hue="#1D9E75" label="Minimalist parse — grammatical (Merge / X-bar)">
-          <input className="field" style={{ background: 'transparent', border: 'none', fontFamily: 'var(--font-mono)', fontSize: 12.5 }}
-            placeholder="[TP [T …] [vP [DP …] …]]" value={parseG} onChange={(e) => setParseG(e.target.value)} />
-        </Panel>
-        <Panel hue="#D85A30" label="Minimalist parse — ungrammatical (failed derivation)">
-          <input className="field" style={{ background: 'transparent', border: 'none', fontFamily: 'var(--font-mono)', fontSize: 12.5 }}
-            placeholder="[TP …] ✗ φ-Agree / feature checking fails" value={parseB} onChange={(e) => setParseB(e.target.value)} />
-        </Panel>
-      </div>
-      <div className="grid grid-2" style={{ marginTop: 12 }}>
-        <Panel hue="#534AB7" label="Interlinear gloss">
-          <input className="field" style={{ background: 'transparent', border: 'none', fontFamily: 'var(--font-mono)', fontSize: 12.5 }}
-            placeholder="walk.PAST.3PL they to-the school — “They walked…”" value={gloss} onChange={(e) => setGloss(e.target.value)} />
-        </Panel>
-        <Panel hue="#993C1D" label="CoNLL-U dependency annotation">
-          <textarea className="field" rows={2} style={{ background: 'transparent', border: 'none', fontFamily: 'var(--font-mono)', fontSize: 11.5, resize: 'vertical' }}
-            placeholder={'1\tword\tlemma\tUPOS\t_\tfeats\thead\tdeprel'} value={conll} onChange={(e) => setConll(e.target.value)} />
-        </Panel>
-      </div>
 
       <div className="faint" style={{ textAlign: 'center', marginTop: 16, fontSize: 12.5 }}>
-        <span className="kbd">A</span> accept · <span className="kbd">E</span> edit · <span className="kbd">R</span> reject — contrast tokens glow amber.
-        Minimalist parses, CoNLL-U & feature bundles raise annotation quality for grammar induction & acquisition models.
+        <span className="kbd">A</span> accept · <span className="kbd">E</span> edit · <span className="kbd">R</span> reject — analysis is derived from the template; edit a field to override it for this instance only.
       </div>
 
       {editing && (

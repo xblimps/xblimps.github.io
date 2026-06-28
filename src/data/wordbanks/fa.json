@@ -1,0 +1,26 @@
+{
+  "language": "fa",
+  "source": "SEED — replace with CC100/OSCAR/CulturaX extraction (fa). A flat corpus pool used for lexical/topic priming, NOT slot filling — sampled sentences need not match the phenomenon.",
+  "sentences": [
+    { "text": "سگ می‌دود.", "length": 2 },
+    { "text": "مدرسه نزدیک است.", "length": 3 },
+    { "text": "غذا آماده است.", "length": 3 },
+    { "text": "مریم غذا خورد.", "length": 3 },
+    { "text": "بچه‌ها غذا خوردند.", "length": 3 },
+    { "text": "خانه بزرگ است.", "length": 3 },
+    { "text": "کتاب کوچک است.", "length": 3 },
+    { "text": "این کتاب بزرگ است.", "length": 4 },
+    { "text": "خانه‌ی ما بزرگ است.", "length": 4 },
+    { "text": "این شهر قدیمی است.", "length": 4 },
+    { "text": "علی به مدرسه رفت.", "length": 4 },
+    { "text": "سارا کتاب را خواند.", "length": 4 },
+    { "text": "او به خانه رفت.", "length": 4 },
+    { "text": "من او را دیدم.", "length": 4 },
+    { "text": "بچه‌ها در خانه غذا خوردند.", "length": 5 },
+    { "text": "سارا و مریم به شهر رفتند.", "length": 6 },
+    { "text": "علی کتاب بزرگ را در مدرسه خواند.", "length": 7 },
+    { "text": "من سگ کوچک را در شهر دیدم.", "length": 7 },
+    { "text": "علی و سارا هر روز به مدرسه‌ی نزدیک می‌روند.", "length": 9 },
+    { "text": "مریم کتاب کوچک را خواند و سپس غذا خورد.", "length": 9 }
+  ]
+}

@@ -3,11 +3,72 @@ import type {
 } from './store'
 import type {
   Workspace, Phenomenon, Template, MinimalPair, Note, Task,
-  CalendarEvent, FileLink, Widget, RosterMember,
+  CalendarEvent, FileLink, Widget, RosterMember, Source, TemplateAnalysis,
+  ChildesDocument, ChildesAnnotation,
 } from './types'
 import { uid, now } from './id'
 
 const stamp = () => ({ row_uid: uid(), rev: 1, updated_at: now(), updated_by: 'You' })
+
+// ---- reference-grammar bibliography (BibTeX-backed Source library) ----
+// One entry per reference grammar, tagged by language + phenomenon family. Seed templates
+// cite these; the Syntax bench surfaces them and can export the whole library as .bib.
+interface SrcSpec {
+  citekey: string; entry_type: string; author: string; year: string; title: string
+  publisher?: string; journal?: string; languages: string[]; phenomena: string[]
+}
+const SOURCE_SPECS: SrcSpec[] = [
+  { citekey: 'borsley2009', entry_type: 'book', author: 'Borsley, Robert D. and Tallerman, Maggie and Willis, David', year: '2009', title: 'The Syntax of Welsh', publisher: 'Cambridge University Press', languages: ['cy'], phenomena: ['agreement', 'morphophonology', 'word-order', 'clitics', 'negation', 'rel-clause', 'clause'] },
+  { citekey: 'mahootian1997', entry_type: 'book', author: 'Mahootian, Shahrzad', year: '1997', title: 'Persian', publisher: 'Routledge', languages: ['fa'], phenomena: ['linking', 'case', 'word-order', 'agreement', 'binding', 'clitics', 'negation', 'rel-clause'] },
+  { citekey: 'donaldson1993', entry_type: 'book', author: 'Donaldson, Bruce C.', year: '1993', title: 'A Grammar of Afrikaans', publisher: 'Mouton de Gruyter', languages: ['af'], phenomena: ['word-order', 'negation', 'agreement', 'clause', 'comparative', 'possession', 'case'] },
+  { citekey: 'kroeger1991', entry_type: 'phdthesis', author: 'Kroeger, Paul', year: '1991', title: 'Phrase Structure and Grammatical Relations in Tagalog', publisher: 'Stanford University', languages: ['tl'], phenomena: ['voice', 'clitics', 'case', 'negation'] },
+  { citekey: 'rackowski2002', entry_type: 'phdthesis', author: 'Rackowski, Andrea', year: '2002', title: 'The Structure of Tagalog: Specificity, Voice, and the Distribution of Arguments', publisher: 'MIT', languages: ['tl'], phenomena: ['voice', 'extraction'] },
+  { citekey: 'law2016', entry_type: 'article', author: 'Law, Paul', year: '2016', title: 'The Syntax of Tagalog Relative Clauses', journal: 'Linguistics', languages: ['tl'], phenomena: ['rel-clause', 'case'] },
+  { citekey: 'wheeler1999', entry_type: 'book', author: 'Wheeler, Max W. and Yates, Alan and Dols, Nicolau', year: '1999', title: 'Catalan: A Comprehensive Grammar', publisher: 'Routledge', languages: ['ca'], phenomena: ['agreement', 'clitics', 'mood', 'morphophonology'] },
+  { citekey: 'riegel2009', entry_type: 'book', author: 'Riegel, Martin and Pellat, Jean-Christophe and Rioul, René', year: '2009', title: 'Grammaire méthodique du français', publisher: 'Presses Universitaires de France', languages: ['fr'], phenomena: ['agreement', 'clitics', 'mood', 'rel-clause'] },
+  { citekey: 'durrell2011', entry_type: 'book', author: 'Durrell, Martin', year: '2011', title: "Hammer's German Grammar and Usage", publisher: 'Routledge', languages: ['de'], phenomena: ['word-order', 'case', 'agreement', 'morphology', 'auxiliary', 'extraction'] },
+]
+
+function bibtexOf(s: SrcSpec): string {
+  const tags = [...s.languages, ...s.phenomena].join(', ')
+  const lines = [
+    `  author = {${s.author}}`,
+    `  title = {${s.title}}`,
+    `  year = {${s.year}}`,
+    s.publisher ? `  publisher = {${s.publisher}}` : '',
+    s.journal ? `  journal = {${s.journal}}` : '',
+    `  keywords = {${tags}}`,
+  ].filter(Boolean)
+  return `@${s.entry_type}{${s.citekey},\n${lines.join(',\n')}\n}`
+}
+
+function buildSources(): Source[] {
+  return SOURCE_SPECS.map((s) => ({
+    ...stamp(), id: 'src.' + s.citekey, citekey: s.citekey, entry_type: s.entry_type,
+    author: s.author, year: s.year, title: s.title, publisher: s.publisher, journal: s.journal,
+    bibtex: bibtexOf(s), languages: s.languages, phenomena: s.phenomena, note: '',
+  }))
+}
+
+// primary reference grammar per language → its src id (for seed-template citations)
+const PRIMARY_SOURCE: Record<string, string> = {
+  cy: 'src.borsley2009', fa: 'src.mahootian1997', af: 'src.donaldson1993',
+  tl: 'src.kroeger1991', ca: 'src.wheeler1999', fr: 'src.riegel2009', de: 'src.durrell2011',
+}
+
+// a generic agreement-flip analysis for the starter template (slot-keyed schemas)
+function starterAnalysis(): TemplateAnalysis {
+  return {
+    parse_good: '[TP [T {VERB}] [vP [DP {SUBJ}] [v′ t_V [PP {GOAL}]]]]',
+    parse_bad: '[TP [T {VERB}] [vP [DP {SUBJ}] …]] ✗ φ-Agree: Number on T mismatches subject',
+    perturbation: { type: 'agreement_flip', target: 'nsubj↔root', relation: 'root→nsubj', depth: 0, description: 'φ-feature (Number) on T flipped against the subject' },
+    paradigm: 'featural',
+    feature_schema: { Number: 'Plur', Person: '3', Tense: 'Past' },
+    feature_contrast: 'Number',
+    conll_schema: '1\t{VERB}\t_\tVERB\t_\tNumber=Plur|Person=3|Tense=Past\t0\troot\n2\t{SUBJ}\t_\tPRON\t_\tNumber=Plur|Person=3\t1\tnsubj\n3\t{GOAL}\t_\tADV\t_\t_\t1\tobl',
+    gloss_schema: '{VERB}.PAST.3PL {SUBJ} {GOAL} — “…”',
+  }
+}
 
 export const NOTEBOOK_COLOURS = [
   '#185FA5', '#1D9E75', '#BA7517', '#D85A30', '#534AB7',
@@ -201,7 +262,7 @@ export function buildSeed(): DB {
       ...stamp(), id: wsId, name: L.name, kind: 'language', icon: L.icon, colour: L.colour,
       cover: cover(L.colour), language: L.language, tier: L.tier, lead: L.lead,
       subtitle: `${L.tier === 'low' ? 'Low-resourced' : 'Higher-resourced'} · lead ${L.lead}`,
-      sections: ['Dashboard', 'Phenomena', 'Templates', 'Card flow', 'Validation', 'Notes', 'Tasks', 'Files', 'Calendar'],
+      sections: ['Overview', 'Phenomena', 'Template Studio', 'Card flow', 'Export'],
       dashboard: { widgets: [
         { id: uid(), type: 'progress', title: 'Construction progress' },
         { id: uid(), type: 'phenomena', title: 'Phenomena' },
@@ -223,17 +284,23 @@ export function buildSeed(): DB {
 
     // one starter template + demo pairs on the first phenomenon
     const first = L.phen[0]
+    const primary = PRIMARY_SOURCE[L.language]
     const tpl: Template = {
       ...stamp(), id: 'tpl.' + L.language + '.1', phenomenon_id: first[0], language: L.language,
       name: `${first[1]} — base template`,
       slots: [
         { name: 'VERB', fillers: ['Cerddon', 'Rhedon', 'Canon'] },
-        { name: 'SUBJ', fillers: ['nhw', 'Aled a Sara', 'y plant'] },
+        // SUBJ is corpus-sampled: the Forge draws a proper name from the language word bank
+        // (cognitive relief), falling back to these fillers for languages without a bank yet.
+        { name: 'SUBJ', fillers: ['nhw', 'Aled a Sara', 'y plant'], pos: 'PROPN', band: 'any', sample: true },
         { name: 'GOAL', fillers: ['i’r ysgol', 'i’r dref', 'adref'] },
       ],
       grammatical: '{VERB} {SUBJ} {GOAL}.',
       ungrammatical: '{VERB}* {SUBJ} {GOAL}.',
       contrast: 'Verb agreement morphology (3PL vs 3SG) against subject type.',
+      citations: primary ? [{ source_id: primary, page: '', example: '', quote: first[4] }] : [],
+      analysis: starterAnalysis(),
+      validation: { status: 'draft', comments: [] },
     }
     templates.push(tpl)
     pairs.push(...demoPairs(first[0], L.language, tpl.id))
@@ -272,8 +339,21 @@ export function buildSeed(): DB {
   )
   events.push({ ...stamp(), id: uid(), workspace_id: 'ws.lab', title: 'Team sync', date: '2026-07-03', kind: 'session' })
 
+  // CHILDES demo (only visible to users with childes access)
+  const childesDoc = {
+    ...stamp(), id: 'chi.1', title: 'Bilingual corpus — sample', language: 'cy/en', child: 'Aled',
+    age: '2;06', source: 'CHILDES (demo)',
+    text: "MOT: wyt ti isio mwy of the juice? CHI: yes please mam. MOT: dyma ti, careful now. CHI: ta. MOT: good boy, da iawn.",
+  } as ChildesDocument
+  const childesAnns: ChildesAnnotation[] = [
+    { ...stamp(), id: uid(), document_id: 'chi.1', char_start: 16, char_end: 31, text_span: 'mwy of the juice', layer: 'code_switch', features: { matrix: 'cy', embedded: 'en' }, annotator: 'You', note: 'intra-sentential switch' },
+    { ...stamp(), id: uid(), document_id: 'chi.1', char_start: 70, char_end: 82, text_span: 'careful now', layer: 'code_switch', features: { matrix: 'cy', embedded: 'en' }, annotator: 'You', note: '' },
+  ]
+
   return {
     workspaces, notes, tasks, files, events, phenomena, templates, pairs,
+    sources: buildSources(),
+    childes_docs: [childesDoc], childes_anns: childesAnns,
     ops: [], audit: [],
     session: { user: 'You', email: 'salhananusha@gmail.com', role: 'coordinator' },
   }

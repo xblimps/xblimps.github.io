@@ -2,16 +2,41 @@ import React, { createContext, useContext, useEffect, useState, useSyncExternalS
 import { store } from '../lib/store'
 import { sync } from '../lib/sync'
 import type { SyncState } from '../lib/types'
+import { isCloud, supabase } from '../lib/supabase'
+import { loadProfile, onAuthChange, signOut, DEMO_PROFILE, demoProfile, type Profile } from '../lib/auth'
+import type { Role } from './../lib/types'
 
 interface Nav {
-  view: 'workspaces' | 'xblimps' | 'roster' | 'audit'
+  view: 'workspaces' | 'xblimps' | 'forge' | 'bench' | 'roster' | 'audit' | 'childes'
   workspaceId: string | null
   section: string
 }
 
+// native-speaker annotators land directly in their focused Forge workspace
+const homeView = (p: Profile): Nav['view'] => (p.role === 'native_speaker' ? 'forge' : 'workspaces')
+
+// the Workspaces module lists notebooks only (languages live under xBLiMPs), so boot
+// into the first notebook rather than whatever happens to be workspaces[0]
+const firstNotebook = (): string | null => store.db.workspaces.find((w) => w.kind === 'notebook')?.id ?? null
+
+// local-only persona preview: `?demo=lead` / `?demo=native_speaker` etc. lets us view the
+// app as a given role without a backend. Ignored in cloud mode (real auth wins).
+const ROLES: Role[] = ['coordinator', 'lead', 'native_speaker', 'reviewer']
+const demoRole = (): Role | null => {
+  if (typeof window === 'undefined') return null
+  const r = new URLSearchParams(window.location.search).get('demo')
+  return r && ROLES.includes(r as Role) ? (r as Role) : null
+}
+
+type BootState = 'loading' | 'signed_out' | 'ready'
+
 interface Ctx {
-  v: number                     // store version (re-render trigger)
+  v: number
   syncState: SyncState
+  boot: BootState
+  profile: Profile
+  demoMode: () => void
+  signOutNow: () => void
   nav: Nav
   go: (n: Partial<Nav>) => void
   openWorkspace: (id: string, section?: string) => void
@@ -20,27 +45,57 @@ interface Ctx {
 const AppCtx = createContext<Ctx>(null as any)
 export const useApp = () => useContext(AppCtx)
 
-// subscribe to the store for re-renders
 export function useStore() {
-  return useSyncExternalStore(
-    (cb) => store.subscribe(cb),
-    () => store.version,
-  )
+  return useSyncExternalStore((cb) => store.subscribe(cb), () => store.version)
 }
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const v = useStore()
   const [syncState, setSyncState] = useState<SyncState>('synced')
-  const [nav, setNav] = useState<Nav>({ view: 'workspaces', workspaceId: store.db.workspaces[0]?.id ?? null, section: 'Dashboard' })
+  const [boot, setBoot] = useState<BootState>(isCloud ? 'loading' : 'ready')
+  const [profile, setProfile] = useState<Profile>(DEMO_PROFILE)
+  const [nav, setNav] = useState<Nav>({ view: 'workspaces', workspaceId: null, section: 'Dashboard' })
 
   useEffect(() => { const unsub = sync.subscribe(setSyncState); return () => { unsub() } }, [])
 
+  // boot: in cloud mode, watch auth → hydrate; in demo mode, ready immediately
+  useEffect(() => {
+    if (!isCloud) {
+      const r = demoRole()
+      const p = r ? demoProfile(r) : DEMO_PROFILE
+      if (r) setProfile(p)
+      const goParam = typeof window !== 'undefined' ? (new URLSearchParams(window.location.search).get('go') as Nav['view'] | null) : null
+      const view = goParam && ['workspaces', 'xblimps', 'forge', 'bench'].includes(goParam) ? goParam : homeView(p)
+      setNav((n) => ({ ...n, view, workspaceId: view === 'xblimps' ? null : firstNotebook(), section: view === 'xblimps' ? 'Home' : n.section }))
+      return
+    }
+    let alive = true
+    const boot = async () => {
+      const { data } = await supabase!.auth.getSession()
+      if (!alive) return
+      if (!data.session) { setBoot('signed_out'); return }
+      const p = await loadProfile()
+      if (!alive) return
+      if (p) {
+        setProfile(p)
+        await store.hydrate(p)
+        setNav((n) => ({ ...n, view: homeView(p), workspaceId: firstNotebook() }))
+        setBoot('ready')
+      } else setBoot('signed_out')
+    }
+    boot()
+    const unsub = onAuthChange(() => boot())
+    return () => { alive = false; unsub() }
+  }, [])
+
+  const demoMode = () => { setProfile(DEMO_PROFILE); setBoot('ready') }
+  const signOutNow = async () => { store.disconnect(); await signOut(); setBoot('signed_out') }
+
   const go = (n: Partial<Nav>) => setNav((cur) => ({ ...cur, ...n }))
-  const openWorkspace = (id: string, section = 'Dashboard') =>
-    setNav({ view: 'workspaces', workspaceId: id, section })
+  const openWorkspace = (id: string, section = 'Dashboard') => setNav({ view: 'workspaces', workspaceId: id, section })
 
   return (
-    <AppCtx.Provider value={{ v, syncState, nav, go, openWorkspace }}>
+    <AppCtx.Provider value={{ v, syncState, boot, profile, demoMode, signOutNow, nav, go, openWorkspace }}>
       {children}
     </AppCtx.Provider>
   )

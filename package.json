@@ -8,16 +8,21 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview --port 4173",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "hf:sync": "tsx scripts/hf-sync.ts"
   },
   "dependencies": {
+    "@huggingface/hub": "^1.1.2",
+    "@supabase/supabase-js": "^2.108.2",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
   "devDependencies": {
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
+    "@vercel/node": "^3.2.29",
     "@vitejs/plugin-react": "^4.3.1",
+    "tsx": "^4.22.4",
     "typescript": "^5.5.3",
     "vite": "^5.4.0"
   }

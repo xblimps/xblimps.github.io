@@ -133,6 +133,18 @@ input, textarea, select { font-family: inherit; }
 .nav-dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
 .nav-count { margin-left: auto; font-size: 11.5px; color: var(--ink-faint); font-variant-numeric: tabular-nums; }
 
+/* guided stage list (drilled into a language) */
+.rail-back {
+  background: transparent; border: none; cursor: pointer; padding: 0;
+  color: var(--ink-soft); font-size: 12.5px; font-weight: 500;
+}
+.rail-back:hover { color: var(--ink); }
+.nav-stage-n { font-size: 15px; opacity: .85; }
+.nav-item.nav-stage.active .nav-stage-n { opacity: 1; }
+.nav-item.locked { cursor: not-allowed; color: var(--ink-faint); opacity: .7; }
+.nav-item.locked:hover { background: transparent; }
+.nav-lockhint { margin-left: auto; font-size: 10.5px; color: var(--ink-faint); font-style: italic; }
+
 /* main */
 .main { overflow-y: auto; background: var(--canvas); position: relative; }
 .main-inner { max-width: 1080px; margin: 0 auto; padding: 0 36px 80px; }
@@ -361,3 +373,61 @@ label.lbl { display: block; font-size: 12.5px; font-weight: 600; color: var(--in
 .stat { display: flex; flex-direction: column; gap: 2px; }
 .stat .n { font-size: 26px; font-weight: 600; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
 .stat .l { font-size: 12px; color: var(--ink-soft); }
+
+/* ---------- Forge — native-speaker focus workspace ---------- */
+.forge { max-width: 680px; margin: 0 auto; padding-top: 6px; }
+.forge-brief {
+  background: var(--accent-bg, rgba(24,95,165,.08)); border: 1px solid rgba(24,95,165,.18);
+  border-radius: var(--radius-lg); padding: 12px 16px; font-size: 15px; color: var(--ink);
+}
+.forge-brief .eyebrow { color: var(--accent); }
+
+.reel { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
+.reel-row {
+  display: flex; align-items: flex-start; gap: 12px; padding: 12px 14px;
+  background: var(--surface); border: 1px solid var(--hair); border-radius: var(--radius-lg);
+}
+.reel-key { display: flex; align-items: center; gap: 8px; min-width: 132px; padding-top: 4px; }
+.reel-num {
+  width: 20px; height: 20px; border-radius: 6px; display: grid; place-items: center;
+  font-size: 11px; font-weight: 700; color: var(--ink-soft);
+  background: var(--canvas-2); border: 1px solid var(--hair);
+}
+.reel-name { font-size: 12px; color: var(--ink-soft); font-weight: 600; }
+.reel-pos {
+  font-size: 10px; text-transform: uppercase; letter-spacing: .06em; color: var(--good);
+  background: var(--good-bg); border-radius: 5px; padding: 1px 5px;
+}
+.reel-main { flex: 1; min-width: 0; }
+.reel-word { font-size: 22px; color: var(--ink); }
+.reel-eg { font-size: 12.5px; color: var(--ink-soft); margin-top: 3px; line-height: 1.4; }
+.reel-tools { display: flex; gap: 4px; align-items: center; }
+.reel-btn {
+  width: 30px; height: 30px; border-radius: 8px; border: 1px solid var(--hair);
+  background: var(--surface); color: var(--ink-soft); font-size: 14px; display: grid; place-items: center;
+  transition: transform .08s ease, background .12s ease;
+}
+.reel-btn:hover { background: var(--canvas-2); color: var(--ink); }
+.reel-btn:active { transform: scale(.92); }
+.reel-btn:disabled { opacity: .4; cursor: default; }
+.reel-btn.on { border-color: var(--contrast); background: var(--contrast-bg); }
+.reel-rollall { align-self: center; margin-top: 4px; color: var(--ink-soft); }
+.reel-input { width: 100%; font-size: 18px; }
+
+/* priming panel — length-varied corpus sentences shown as inspiration (not slot fillers) */
+.prime {
+  margin-top: 16px; padding: 12px 14px; background: var(--surface);
+  border: 1px solid var(--hair); border-radius: var(--radius-lg);
+}
+.prime-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.prime-title { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.prime-title .eyebrow { color: var(--accent); }
+.prime-list { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.prime-item { display: flex; align-items: baseline; gap: 10px; padding: 3px 0; line-height: 1.45; }
+.prime-item[dir="rtl"] { flex-direction: row-reverse; }
+.prime-len {
+  flex: none; width: 22px; text-align: center; font-size: 10px; font-weight: 700;
+  color: var(--ink-soft); background: var(--canvas-2); border: 1px solid var(--hair);
+  border-radius: 5px; padding: 1px 0;
+}
+.prime-text { font-size: 15px; color: var(--ink); min-width: 0; }
