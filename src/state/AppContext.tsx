@@ -7,13 +7,13 @@ import { loadProfile, onAuthChange, signOut, DEMO_PROFILE, demoProfile, type Pro
 import type { Role } from './../lib/types'
 
 interface Nav {
-  view: 'workspaces' | 'xblimps' | 'forge' | 'bench' | 'roster' | 'audit' | 'childes'
+  view: 'board' | 'xblimps' | 'forge' | 'bench' | 'roster' | 'audit' | 'childes'
   workspaceId: string | null
   section: string
 }
 
 // native-speaker annotators land directly in their focused Forge workspace
-const homeView = (p: Profile): Nav['view'] => (p.role === 'native_speaker' ? 'forge' : 'workspaces')
+const homeView = (p: Profile): Nav['view'] => (p.role === 'native_speaker' ? 'forge' : 'board')
 
 // the Workspaces module lists notebooks only (languages live under xBLiMPs), so boot
 // into the first notebook rather than whatever happens to be workspaces[0]
@@ -40,7 +40,6 @@ interface Ctx {
   signOutNow: () => void
   nav: Nav
   go: (n: Partial<Nav>) => void
-  openWorkspace: (id: string, section?: string) => void
 }
 
 const AppCtx = createContext<Ctx>(null as any)
@@ -55,7 +54,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [syncState, setSyncState] = useState<SyncState>('synced')
   const [boot, setBoot] = useState<BootState>(isCloud ? 'loading' : 'ready')
   const [profile, setProfile] = useState<Profile>(DEMO_PROFILE)
-  const [nav, setNav] = useState<Nav>({ view: 'workspaces', workspaceId: null, section: 'Dashboard' })
+  const [nav, setNav] = useState<Nav>({ view: 'board', workspaceId: null, section: 'Dashboard' })
 
   useEffect(() => { const unsub = sync.subscribe(setSyncState); return () => { unsub() } }, [])
 
@@ -74,7 +73,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setNav((n) => ({ ...n, view: 'xblimps', workspaceId: langWs.id, section: sp.get('section') || 'Template Studio' }))
         return
       }
-      const view = goParam && ['workspaces', 'xblimps', 'forge', 'bench', 'roster', 'audit', 'childes'].includes(goParam) ? goParam : homeView(p)
+      const view = goParam && ['board', 'xblimps', 'forge', 'bench', 'roster', 'audit', 'childes'].includes(goParam) ? goParam : homeView(p)
       setNav((n) => ({ ...n, view, workspaceId: view === 'xblimps' ? null : firstNotebook(), section: view === 'xblimps' ? 'Home' : n.section }))
       return
     }
@@ -112,10 +111,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const signOutNow = async () => { store.disconnect(); await signOut(); setBoot('signed_out') }
 
   const go = (n: Partial<Nav>) => setNav((cur) => ({ ...cur, ...n }))
-  const openWorkspace = (id: string, section = 'Dashboard') => setNav({ view: 'workspaces', workspaceId: id, section })
 
   return (
-    <AppCtx.Provider value={{ v, syncState, boot, profile, demoMode, enterPreview, signOutNow, nav, go, openWorkspace }}>
+    <AppCtx.Provider value={{ v, syncState, boot, profile, demoMode, enterPreview, signOutNow, nav, go }}>
       {children}
     </AppCtx.Provider>
   )

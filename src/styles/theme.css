@@ -164,6 +164,17 @@ input, textarea, select { font-family: inherit; }
   padding: 10px 12px; margin-top: 4px; overflow-x: auto;
 }
 
+/* completion board — leaderboard table */
+.board-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.board-table th {
+  text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .06em;
+  color: var(--ink-faint); font-weight: 600; padding: 12px 16px; border-bottom: 1px solid var(--hair);
+}
+.board-table td { padding: 12px 16px; border-bottom: 1px solid var(--hair); }
+.board-table tr:last-child td { border-bottom: none; }
+.board-table tbody tr:hover { background: var(--hair-2); }
+.board-table .me-row { background: var(--accent-bg, rgba(24,95,165,.06)); }
+
 /* main */
 .main { overflow-y: auto; background: var(--canvas); position: relative; }
 .main-inner { max-width: 1080px; margin: 0 auto; padding: 0 36px 80px; }

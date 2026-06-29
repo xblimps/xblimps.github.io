@@ -1,13 +1,11 @@
-import React, { useState } from 'react'
+import React from 'react'
 import { useApp } from './state/AppContext'
-import { store, ident } from './lib/store'
-import { uid } from './lib/id'
-import { cover, NOTEBOOK_COLOURS } from './lib/seed'
-import type { Workspace, SyncState } from './lib/types'
-import { Modal, IconPicker, ColourPicker, Field, useToggle } from './components/ui'
+import { store } from './lib/store'
+import type { SyncState } from './lib/types'
 import WorkspaceView from './modules/workspace/Workspace'
 import Home from './modules/xblimps/Home'
 import Guide from './modules/xblimps/Guide'
+import Board from './modules/board/Board'
 import { STAGES, stageState, stageCount } from './lib/stages'
 import Forge from './modules/xblimps/Forge'
 import Bench from './modules/xblimps/Bench'
@@ -20,39 +18,8 @@ import { isAdmin } from './lib/auth'
 const SYNC_LABEL: Record<SyncState, string> = { synced: 'All changes saved', syncing: 'Saving…', offline: 'Offline — queued' }
 const SyncChip = ({ state }: { state: SyncState }) => <span className={`sync-chip sync-${state}`}><span className="pip" />{SYNC_LABEL[state]}</span>
 
-function NewWorkspace({ onClose, onCreated }: { onClose: () => void; onCreated: (id: string) => void }) {
-  const [name, setName] = useState(''); const [icon, setIcon] = useState('📓')
-  const [colour, setColour] = useState(NOTEBOOK_COLOURS[4])
-  const create = () => {
-    const id = 'ws.' + uid().slice(0, 6)
-    const ws: Workspace = {
-      ...ident(), id, name: name || 'New notebook', kind: 'notebook', icon, colour, cover: cover(colour),
-      subtitle: 'Notebook', sections: ['Dashboard', 'Notes', 'Tasks', 'Files', 'Calendar'],
-      dashboard: { widgets: [
-        { id: uid(), type: 'progress', title: 'Progress' },
-        { id: uid(), type: 'tasks', title: 'Tasks' },
-        { id: uid(), type: 'notes', title: 'Notes' },
-        { id: uid(), type: 'keyinfo', title: 'Key information' },
-      ] },
-    }
-    store.upsert('workspaces', ws); onCreated(id); onClose()
-  }
-  return (
-    <Modal title="New workspace" sub="A fresh notebook — dashboard, notes, tasks, files, calendar" onClose={onClose}>
-      <Field label="Name" value={name} onChange={setName} placeholder="Reading group" />
-      <label className="lbl">Icon</label><IconPicker value={icon} onChange={setIcon} />
-      <label className="lbl">Notebook colour</label><ColourPicker value={colour} onChange={setColour} />
-      <div style={{ marginTop: 12, height: 70, borderRadius: 12, background: cover(colour), position: 'relative' }}>
-        <span style={{ position: 'absolute', left: 16, bottom: -14, fontSize: 30 }}>{icon}</span>
-      </div>
-      <div style={{ marginTop: 26, textAlign: 'right' }}><button className="btn btn-primary" onClick={create}>Create workspace</button></div>
-    </Modal>
-  )
-}
-
 export default function App() {
-  const { boot, profile, syncState, signOutNow, nav, go, openWorkspace } = useApp()
-  const [newWs, openNew, closeNew] = useToggle()
+  const { boot, profile, syncState, signOutNow, nav, go } = useApp()
 
   if (boot === 'loading') return <div style={{ height: '100%', display: 'grid', placeItems: 'center', color: 'var(--ink-soft)' }}>Loading…</div>
   if (boot === 'signed_out') return <Login />
@@ -64,21 +31,19 @@ export default function App() {
   // none of the coordinator machinery). Everyone else keeps the full module switcher.
   const onlyForge = profile.role === 'native_speaker'
   const workspaces = store.db.workspaces
-  const notebooks = workspaces.filter((w) => w.kind === 'notebook')
   const langs = workspaces.filter((w) => w.kind === 'language')
 
-  const inWorkspaces = nav.view === 'workspaces'
   const inXblimps = nav.view === 'xblimps'
-  const showRail = inWorkspaces || inXblimps
+  const showRail = inXblimps
   const activeWs = workspaces.find((w) => w.id === nav.workspaceId)
-  const titleMap: Record<string, string> = { workspaces: activeWs?.name ?? 'Workspaces', xblimps: 'xBLiMPs · minimal pairs', forge: 'Minimal-pair forge', bench: 'Syntax bench · template validation', roster: 'Team & onboarding', audit: 'Sync ledger', childes: 'CHILDES annotation' }
+  const titleMap: Record<string, string> = { board: 'Completion board', xblimps: 'xBLiMPs · minimal pairs', forge: 'Minimal-pair forge', bench: 'Syntax bench · template validation', roster: 'Team & onboarding', audit: 'Sync ledger', childes: 'CHILDES annotation' }
 
   return (
     <div className="app" style={!showRail ? { gridTemplateColumns: '64px 1fr' } : undefined}>
       {/* spine / module switcher */}
       <div className="spine">
         <div className="spine-logo">x</div>
-        {!onlyForge && <button className={`spine-btn ${inWorkspaces ? 'active' : ''}`} title="Workspaces" onClick={() => go({ view: 'workspaces', section: 'Dashboard' })}>📓</button>}
+        {!onlyForge && <button className={`spine-btn ${nav.view === 'board' ? 'active' : ''}`} title="Completion board" onClick={() => go({ view: 'board' })}>🏁</button>}
         {!onlyForge && <button className={`spine-btn ${inXblimps ? 'active' : ''}`} title="xBLiMPs minimal pairs" onClick={() => go({ view: 'xblimps', workspaceId: null, section: 'Home' })}>🔤</button>}
         <button className={`spine-btn ${nav.view === 'forge' ? 'active' : ''}`} title="Minimal-pair forge" onClick={() => go({ view: 'forge' })}>🪄</button>
         {!onlyForge && <button className={`spine-btn ${nav.view === 'bench' ? 'active' : ''}`} title="Syntax bench — template validation" onClick={() => go({ view: 'bench' })}>🧬</button>}
@@ -89,28 +54,9 @@ export default function App() {
         <button className="spine-btn" title="Sign out" onClick={signOutNow}>⎋</button>
       </div>
 
-      {/* primary rail */}
+      {/* primary rail — xBLiMPs only */}
       {showRail && (
         <div className="rail">
-          {/* ── Workspaces: notebook list ── */}
-          {inWorkspaces && (
-            <>
-              <div className="rail-head">
-                <div className="rail-title">Workspaces</div>
-                <div className="rail-sub">your notebooks & projects</div>
-              </div>
-              <div className="rail-body">
-                <div className="rail-section-label">Notebooks</div>
-                {notebooks.map((w) => (
-                  <button key={w.id} className={`nav-item ${nav.workspaceId === w.id ? 'active' : ''}`} onClick={() => openWorkspace(w.id)}>
-                    <span className="nav-emoji">{w.icon}</span><span>{w.name}</span>
-                  </button>
-                ))}
-                <button className="nav-item" onClick={openNew}><span className="nav-emoji">＋</span><span className="muted">New workspace</span></button>
-              </div>
-            </>
-          )}
-
           {/* ── xBLiMPs: language picker (no drill-in yet) ── */}
           {inXblimps && !activeWs && (
             <>
@@ -180,18 +126,16 @@ export default function App() {
           <SyncChip state={syncState} />
           <span className="tag">{profile.name} · {profile.role.replace('_', ' ')}</span>
         </div>
-        {(inWorkspaces || inXblimps) && activeWs && <WorkspaceView workspaceId={activeWs.id} section={nav.section} onSection={(s) => go({ section: s })} />}
+        {nav.view === 'board' && <Board />}
+        {inXblimps && activeWs && <WorkspaceView workspaceId={activeWs.id} section={nav.section} onSection={(s) => go({ section: s })} />}
         {inXblimps && !activeWs && nav.section === 'Guide' && <Guide />}
         {inXblimps && !activeWs && nav.section !== 'Guide' && <Home langs={langs} onOpen={(id) => go({ view: 'xblimps', workspaceId: id, section: 'Overview' })} />}
-        {inWorkspaces && !activeWs && <div className="empty"><div className="big">📓</div>Pick a workspace from the rail, or create a new one.</div>}
         {nav.view === 'forge' && <Forge />}
         {nav.view === 'bench' && <Bench />}
         {nav.view === 'roster' && (admin ? <Team /> : <div className="empty"><div className="big">🔒</div>You don't have access to this project.</div>)}
         {nav.view === 'audit' && (admin ? <Audit /> : <div className="empty"><div className="big">🔒</div>You don't have access to this project.</div>)}
         {nav.view === 'childes' && (admin ? <Childes /> : <div className="empty"><div className="big">🔒</div>You don't have access to this project.</div>)}
       </div>
-
-      {newWs && <NewWorkspace onClose={closeNew} onCreated={(id) => openWorkspace(id)} />}
     </div>
   )
 }
