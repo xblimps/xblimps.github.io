@@ -36,6 +36,7 @@ interface Ctx {
   boot: BootState
   profile: Profile
   demoMode: () => void
+  enterPreview: (role: Role) => void
   signOutNow: () => void
   nav: Nav
   go: (n: Partial<Nav>) => void
@@ -64,8 +65,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const r = demoRole()
       const p = r ? demoProfile(r) : DEMO_PROFILE
       if (r) setProfile(p)
-      const goParam = typeof window !== 'undefined' ? (new URLSearchParams(window.location.search).get('go') as Nav['view'] | null) : null
-      const view = goParam && ['workspaces', 'xblimps', 'forge', 'bench'].includes(goParam) ? goParam : homeView(p)
+      const sp = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : new URLSearchParams()
+      const goParam = sp.get('go') as Nav['view'] | null
+      const langParam = sp.get('lang')
+      // deep-link into a language stage (e.g. ?lang=cy&section=Template%20Studio) for previews
+      const langWs = langParam ? store.db.workspaces.find((w) => w.language === langParam || w.id === langParam) : null
+      if (langWs) {
+        setNav((n) => ({ ...n, view: 'xblimps', workspaceId: langWs.id, section: sp.get('section') || 'Template Studio' }))
+        return
+      }
+      const view = goParam && ['workspaces', 'xblimps', 'forge', 'bench', 'roster', 'audit', 'childes'].includes(goParam) ? goParam : homeView(p)
       setNav((n) => ({ ...n, view, workspaceId: view === 'xblimps' ? null : firstNotebook(), section: view === 'xblimps' ? 'Home' : n.section }))
       return
     }
@@ -89,13 +98,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const demoMode = () => { setProfile(DEMO_PROFILE); setBoot('ready') }
+
+  // default/quick logins — enter a local seeded demo session as a given persona (works on the
+  // deployed cloud site too, without a magic link). Native speakers land in the Forge.
+  const enterPreview = (role: Role) => {
+    const p = demoProfile(role)
+    store.enterDemoMode()
+    setProfile(p)
+    setNav({ view: homeView(p), workspaceId: firstNotebook(), section: 'Dashboard' })
+    setBoot('ready')
+  }
+
   const signOutNow = async () => { store.disconnect(); await signOut(); setBoot('signed_out') }
 
   const go = (n: Partial<Nav>) => setNav((cur) => ({ ...cur, ...n }))
   const openWorkspace = (id: string, section = 'Dashboard') => setNav({ view: 'workspaces', workspaceId: id, section })
 
   return (
-    <AppCtx.Provider value={{ v, syncState, boot, profile, demoMode, signOutNow, nav, go, openWorkspace }}>
+    <AppCtx.Provider value={{ v, syncState, boot, profile, demoMode, enterPreview, signOutNow, nav, go, openWorkspace }}>
       {children}
     </AppCtx.Provider>
   )

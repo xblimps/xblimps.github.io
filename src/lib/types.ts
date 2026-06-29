@@ -134,6 +134,29 @@ export interface Citation {
 // The fine-grained Minimalist analysis authored ONCE on a template. Slot-keyed
 // schemas ({SLOT} placeholders) are substituted per instantiation by lib/derive.ts
 // to auto-derive each pair's parse, CoNLL-U, gloss, and featural contrast.
+// An extra, optional tier of annotation a syntactician can stack on a template — beyond the
+// primary Minimalist parse / UD / features below. Each layer is free-form text in its formalism,
+// renderable as a tree when bracketed, and independently approvable.
+export type AnnotationLayerKind =
+  | 'minimalist'   // labelled-bracketing Minimalist / X-bar tree (Merge, features, movement)
+  | 'ud'           // Universal Dependencies / CoNLL-U
+  | 'penn'         // Penn Treebank phrase-structure bracketing
+  | 'gloss'        // interlinear morpheme gloss (Leipzig)
+  | 'morphology'   // morphological segmentation / features
+  | 'semantics'    // logical form / event semantics
+  | 'prosody'      // prosodic / information structure
+  | 'custom'
+
+export interface AnnotationLayer {
+  id: string
+  kind: AnnotationLayerKind
+  label: string
+  content: string            // the annotation in its formalism (may contain {SLOT} placeholders)
+  variant?: 'good' | 'bad' | 'both'  // which alternant this layer annotates
+  approved?: boolean         // syntactician sign-off on this tier
+  note?: string
+}
+
 export interface TemplateAnalysis {
   parse_good: string        // "[TP [T {VERB}] [vP [DP {SUBJ}] …]]"
   parse_bad: string         // failed-derivation schema for the ungrammatical alternant
@@ -143,6 +166,8 @@ export interface TemplateAnalysis {
   feature_contrast: string                 // the single feature that flips good→bad
   conll_schema: string      // CoNLL-U skeleton; FORM column uses {SLOT} placeholders
   gloss_schema: string      // interlinear gloss with {SLOT} placeholders
+  penn?: string             // Penn Treebank phrase-structure bracketing (optional)
+  layers?: AnnotationLayer[] // additional stacked annotation tiers (optional, extensible)
 }
 
 export type TemplateStatus = 'draft' | 'in_review' | 'validated' | 'flagged'

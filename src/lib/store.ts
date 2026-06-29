@@ -129,6 +129,17 @@ class Store {
     if (this.channel && supabase) { supabase.removeChannel(this.channel); this.channel = null }
   }
 
+  // Switch the live (cloud) app into a local, seeded demo session — used by the "default
+  // logins" on the Login page so anyone can try the app as a given persona on the deployed
+  // site without a magic link. Writes go to localStorage only; nothing touches the backend.
+  enterDemoMode() {
+    this.disconnect()
+    this.cloud = false
+    this.db = loadLocal()
+    this.hydrated = true
+    this.emit()
+  }
+
   private onRealtime(payload: any) {
     if (payload.eventType === 'DELETE') { this.removeInbound(payload.old?.row_uid); return }
     const nw = payload.new

@@ -2,8 +2,13 @@ import React, { useState } from 'react'
 import { sendMagicLink, isCloud } from '../lib/auth'
 import { useApp } from '../state/AppContext'
 
+const PREVIEWS: { role: 'lead' | 'native_speaker'; label: string; icon: string; blurb: string }[] = [
+  { role: 'native_speaker', label: 'Native speaker', icon: '🗣️', blurb: 'Focused Forge — judge minimal-pair cards' },
+  { role: 'lead', label: 'Team / lead', icon: '🧑‍🏫', blurb: 'Full workspace — phenomena, templates, cards' },
+]
+
 export default function Login() {
-  const { demoMode } = useApp()
+  const { demoMode, enterPreview } = useApp()
   const [email, setEmail] = useState('')
   const [sent, setSent] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -54,6 +59,24 @@ export default function Login() {
             </>
           )}
         </div>
+        <div style={{ marginTop: 18 }}>
+          <div className="row" style={{ alignItems: 'center', gap: 10, marginBottom: 10 }}>
+            <div style={{ flex: 1, height: 1, background: 'var(--hair)' }} />
+            <span className="faint" style={{ fontSize: 11.5, textTransform: 'uppercase', letterSpacing: '.08em' }}>or try a demo login</span>
+            <div style={{ flex: 1, height: 1, background: 'var(--hair)' }} />
+          </div>
+          <div className="grid grid-2" style={{ gap: 10 }}>
+            {PREVIEWS.map((p) => (
+              <button key={p.role} className="card" style={{ textAlign: 'left', cursor: 'pointer', padding: 14 }} onClick={() => enterPreview(p.role)}>
+                <div style={{ fontSize: 20 }}>{p.icon}</div>
+                <div style={{ fontWeight: 600, fontSize: 14, marginTop: 4 }}>{p.label}</div>
+                <div className="faint" style={{ fontSize: 11.5, marginTop: 2, lineHeight: 1.4 }}>{p.blurb}</div>
+              </button>
+            ))}
+          </div>
+          <p className="faint" style={{ fontSize: 11, textAlign: 'center', marginTop: 10 }}>Demo logins use seeded sample data on this device only — no account or backend.</p>
+        </div>
+
         <p className="faint" style={{ fontSize: 12, textAlign: 'center', marginTop: 18 }}>University of Cambridge · language technologies for under-studied languages</p>
       </div>
     </div>
