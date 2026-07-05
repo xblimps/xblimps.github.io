@@ -44,7 +44,7 @@ export const ENTITY_KEYS: (keyof DB)[] = [
 export const appOf = (entity: string): 'xblimps' | 'childes' =>
   entity.startsWith('childes_') ? 'childes' : 'xblimps'
 
-const KEY = 'xblimps.db.v4'
+const KEY = 'xblimps.db.v5'
 
 function emptyDB(): DB {
   return {

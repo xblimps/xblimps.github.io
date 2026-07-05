@@ -56,7 +56,7 @@ export default function CardFlow({ language }: { language: string }) {
   const [naturalness, setNaturalness] = useState(0)
   const [showAnalysis, setShowAnalysis] = useState(true)
   // per-instance overrides of derived analysis fields
-  const [over, setOver] = useState<Partial<Pick<MinimalPair, 'parse_good' | 'parse_bad' | 'gloss' | 'conll' | 'feature_contrast'>>>({})
+  const [over, setOver] = useState<Partial<Pick<MinimalPair, 'parse_good' | 'parse_bad' | 'gloss' | 'conll' | 'feature_contrast' | 'translation'>>>({})
 
   // derived snapshot for the current instantiation (template analysis + fillers)
   const derived = useMemo(() => tpl ? derivePair(tpl, expandTemplate(tpl, seed)) : null, [tpl, seed])
@@ -77,7 +77,7 @@ export default function CardFlow({ language }: { language: string }) {
       sentence_good: good, sentence_bad: bad, contrast_tokens: eff.contrast_tokens,
       parse_good: eff.parse_good, parse_bad: eff.parse_bad, gloss: eff.gloss, conll: eff.conll,
       features: eff.features, feature_contrast: eff.feature_contrast, paradigm: eff.paradigm,
-      perturbation: eff.perturbation, fillers: eff.fillers,
+      perturbation: eff.perturbation, translation: eff.translation, fillers: eff.fillers,
       overrides: overrides.length ? overrides : undefined,
       author: store.db.session.user, status,
       naturalness_score: naturalness || undefined, notes: '',
@@ -140,6 +140,16 @@ export default function CardFlow({ language }: { language: string }) {
           <button className="act-btn act-edit" onClick={() => { setEGood(eff.sentence_good); setEBad(eff.sentence_bad); setEditing(true) }}><span>Edit</span><span className="act-key">E</span></button>
           <button className="act-btn act-reject" onClick={() => commit('rejected')}><span>Reject</span><span className="act-key">R</span></button>
         </div>
+      </div>
+
+      {/* English translation — collected for every correct sentence (cross-linguistic access) */}
+      <div style={{ marginTop: 14 }}>
+        <Panel hue="#0F6E56" label="English translation — of the grammatical sentence">
+          <input className="field" dir="ltr"
+            style={{ background: over.translation != null ? 'var(--contrast-bg)' : 'transparent', border: 'none', fontSize: 14 }}
+            placeholder="Natural English translation…"
+            value={eff.translation} onChange={(e) => setOver({ ...over, translation: e.target.value })} />
+        </Panel>
       </div>
 
       {/* naturalness rating */}

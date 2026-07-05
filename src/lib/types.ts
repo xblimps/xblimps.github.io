@@ -166,6 +166,7 @@ export interface TemplateAnalysis {
   feature_contrast: string                 // the single feature that flips good→bad
   conll_schema: string      // CoNLL-U skeleton; FORM column uses {SLOT} placeholders
   gloss_schema: string      // interlinear gloss with {SLOT} placeholders
+  translation_schema?: string // natural English translation of the grammatical pattern; {SLOT}-keyed
   penn?: string             // Penn Treebank phrase-structure bracketing (optional)
   layers?: AnnotationLayer[] // additional stacked annotation tiers (optional, extensible)
 }
@@ -221,6 +222,7 @@ export interface MinimalPair extends Identified {
   feature_contrast: string    // the single feature that differs (featural minimal pair, for SAE / learning dynamics)
   paradigm: 'lexical' | 'featural'  // lexical minimal pair vs single-feature contrast
   perturbation: Perturbation  // fine-grained syntactic perturbation that derives bad from good
+  translation?: string        // natural English translation of the grammatical sentence (cross-linguistic access)
   fillers: Record<string, string>
   // The analysis fields above are a DERIVED snapshot, auto-filled from the template's
   // TemplateAnalysis by lib/derive.ts at construction time. `overrides` records the

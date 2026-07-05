@@ -42,6 +42,7 @@ export interface DerivedAnalysis {
   parse_bad: string
   conll: string
   gloss: string
+  translation: string
   features: Record<string, string>
   feature_contrast: string
   paradigm: 'lexical' | 'featural'
@@ -56,6 +57,7 @@ export function deriveAnalysis(tpl: Template, fillers: Record<string, string>): 
     parse_bad: fill(a.parse_bad, fillers),
     conll: fill(a.conll_schema, fillers),
     gloss: fill(a.gloss_schema, fillers),
+    translation: fill(a.translation_schema ?? '', fillers),
     features: deriveFeatures(tpl, fillers),
     feature_contrast: a.feature_contrast,
     paradigm: a.paradigm,
@@ -81,12 +83,13 @@ export function derivePair(
   exp: Expansion,
 ): Pick<MinimalPair,
   'sentence_good' | 'sentence_bad' | 'contrast_tokens' | 'parse_good' | 'parse_bad' |
-  'gloss' | 'conll' | 'features' | 'feature_contrast' | 'paradigm' | 'perturbation' | 'fillers'
+  'gloss' | 'conll' | 'translation' | 'features' | 'feature_contrast' | 'paradigm' | 'perturbation' | 'fillers'
 > {
   const d = deriveAnalysis(tpl, exp.fillers)
   return {
     sentence_good: exp.good, sentence_bad: exp.bad, contrast_tokens: exp.tokens,
     parse_good: d.parse_good, parse_bad: d.parse_bad, gloss: d.gloss, conll: d.conll,
+    translation: d.translation,
     features: d.features, feature_contrast: d.feature_contrast, paradigm: d.paradigm,
     perturbation: d.perturbation, fillers: exp.fillers,
   }

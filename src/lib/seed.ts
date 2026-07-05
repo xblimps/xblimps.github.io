@@ -67,6 +67,8 @@ function starterAnalysis(): TemplateAnalysis {
     feature_contrast: 'Number',
     conll_schema: '1\t{VERB}\t_\tVERB\t_\tNumber=Plur|Person=3|Tense=Past\t0\troot\n2\t{SUBJ}\t_\tPRON\t_\tNumber=Plur|Person=3\t1\tnsubj\n3\t{GOAL}\t_\tADV\t_\t_\t1\tobl',
     gloss_schema: '{VERB}.PAST.3PL {SUBJ} {GOAL} — “…”',
+    translation_schema: 'They walked {GOAL}.',
+    penn: '(S (NP {SUBJ}) (VP (V {VERB}) (PP {GOAL})))',
   }
 }
 
@@ -219,6 +221,7 @@ function demoPairs(phenId: string, lang: string, tplId: string): MinimalPair[] {
     parse_good: pg, parse_bad: pb, gloss, conll, features: feat, feature_contrast: fc,
     paradigm: fc ? 'featural' : 'lexical',
     perturbation: { type: 'agreement_flip', target: 'nsubj↔root', relation: 'root→nsubj', depth: 0, description: 'φ-feature (Number) on T flipped against subject type' },
+    translation: gloss.match(/“([^”]*)”/)?.[1] ?? '',
     fillers: {}, author: 'Aoife', status,
     notes: '',
   })

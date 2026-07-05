@@ -61,6 +61,16 @@ export function parseBracketTree(src: string): TreeNode | null {
   return { id: 'root', label: '', children: roots, terminal: false }
 }
 
+// Pretty-print a parsed tree as indented labelled bracketing (the "Brackets" derived view).
+// Nodes whose children are all leaves are kept inline; deeper structure is indented.
+export function serializeIndented(n: TreeNode, depth = 0): string {
+  const pad = '  '.repeat(depth)
+  if (n.children.length === 0) return pad + n.label
+  const allLeaf = n.children.every((c) => c.children.length === 0)
+  if (allLeaf) return `${pad}[${n.label} ${n.children.map((c) => c.label).join(' ')}]`
+  return `${pad}[${n.label}\n${n.children.map((c) => serializeIndented(c, depth + 1)).join('\n')}]`
+}
+
 export interface PosNode { node: TreeNode; x: number; y: number }
 export interface TreeLayout { nodes: PosNode[]; edges: [PosNode, PosNode][]; width: number; height: number }
 
