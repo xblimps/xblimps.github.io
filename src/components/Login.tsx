@@ -85,6 +85,21 @@ export default function Login() {
               <button className="btn btn-primary" style={{ width: '100%', justifyContent: 'center', marginTop: 16 }} disabled={busy} onClick={submit}>
                 {busy ? 'Sending…' : 'Send magic link'}
               </button>
+
+              <div className="row" style={{ alignItems: 'center', gap: 10, margin: '20px 0 4px' }}>
+                <div style={{ flex: 1, height: 1, background: 'var(--hair)' }} />
+                <span className="faint" style={{ fontSize: 11.5, textTransform: 'uppercase', letterSpacing: '.08em' }}>or log in with your password</span>
+                <div style={{ flex: 1, height: 1, background: 'var(--hair)' }} />
+              </div>
+
+              <label className="lbl">Password</label>
+              <input className="field" type="password" placeholder="Your password" value={password}
+                onChange={(e) => setPassword(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && submitPassword()} />
+              {pwErr && <div style={{ color: 'var(--bad)', fontSize: 13, marginTop: 8 }}>{pwErr}</div>}
+              <button className="btn btn-primary" style={{ width: '100%', justifyContent: 'center', marginTop: 16 }} disabled={pwBusy} onClick={submitPassword}>
+                {pwBusy ? 'Logging in…' : 'Login'}
+              </button>
+
               <p className="faint" style={{ fontSize: 12.5, textAlign: 'center', marginTop: 14 }}>
                 Access is invite-only. If you were invited, sign in with the email you were contacted on.
               </p>
