@@ -10,6 +10,7 @@ interface Nav {
   view: 'board' | 'xblimps' | 'forge' | 'bench' | 'roster' | 'audit' | 'childes'
   workspaceId: string | null
   section: string
+  focus?: string          // optional deep-link hint (e.g. the language to preselect in Bibliography)
 }
 
 // native-speaker annotators land directly in their focused Forge workspace

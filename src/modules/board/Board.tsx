@@ -5,6 +5,7 @@
 import React, { useState } from 'react'
 import { store } from '../../lib/store'
 import { Bar, Ring } from '../../components/ui'
+import Guide from './Guide'
 
 const ACCEPTED = ['accepted', 'edited', 'validated']
 export const TARGET_TEMPLATES = 100
@@ -32,7 +33,7 @@ function Stat({ label, value, sub, pct }: { label: string; value: string; sub?: 
 }
 
 export default function Board() {
-  const [tab, setTab] = useState<'board' | 'leaderboard' | 'profile'>('board')
+  const [tab, setTab] = useState<'guide' | 'board' | 'leaderboard' | 'profile'>('guide')
   const me = store.db.session.user
 
   const templates = store.db.templates
@@ -84,19 +85,23 @@ export default function Board() {
       <p className="muted" style={{ marginTop: 6 }}>Community progress toward {TARGET_TEMPLATES} templates and {fmt(TARGET_SENTENCES)} validated sentences.</p>
 
       <div className="row" style={{ gap: 6, margin: '16px 0 20px', flexWrap: 'wrap' }}>
-        {(['board', 'leaderboard', 'profile'] as const).map((t) => (
+        {(['guide', 'board', 'leaderboard', 'profile'] as const).map((t) => (
           <button key={t} className={`btn btn-sm ${tab === t ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setTab(t)}>
-            {t === 'board' ? 'Completion board' : t === 'leaderboard' ? 'Leaderboard' : 'My profile'}
+            {t === 'guide' ? '📖 Guide' : t === 'board' ? 'Completion board' : t === 'leaderboard' ? 'Leaderboard' : 'My profile'}
           </button>
         ))}
       </div>
 
-      {/* ── community stats (always shown) ── */}
+      {tab === 'guide' && <Guide />}
+
+      {/* ── community stats (shown on the progress tabs) ── */}
+      {tab !== 'guide' && (
       <div className="grid grid-3" style={{ marginBottom: 8 }}>
         <Stat label="Templates" value={`${templates.length} / ${TARGET_TEMPLATES}`} pct={(templates.length / TARGET_TEMPLATES) * 100} />
         <Stat label="Completed templates" value={`${counts.done}`} sub={`${counts.progress} in progress · ${counts.none} untouched`} pct={overallPct} />
         <Stat label="Validated sentences" value={`${fmt(totalValidated)} / ${fmt(TARGET_SENTENCES)}`} pct={(totalValidated / TARGET_SENTENCES) * 100} />
       </div>
+      )}
 
       {tab === 'board' && (
         <div style={{ marginTop: 18 }}>

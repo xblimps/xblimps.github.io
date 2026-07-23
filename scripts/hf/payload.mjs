@@ -15,6 +15,55 @@ const LEDGER_KEYS = ['ops', 'audit']
 const jsonl = (rows) => (rows || []).map((r) => JSON.stringify(r)).join('\n') + ((rows && rows.length) ? '\n' : '')
 const arr = (db, k) => (Array.isArray(db?.[k]) ? db[k] : [])
 
+// Serialise one Source to a BibTeX entry (mirrors src/lib/bibtex.ts sourceToBibtex, kept in
+// plain JS so the server + CLI can build the .bib without importing the TS module).
+function sourceToBibtex(s) {
+  const tags = [...(s.languages || []), ...(s.phenomena || [])].filter(Boolean)
+  const extras = [
+    tags.length ? `  keywords = {${tags.join(', ')}}` : '',
+    s.contributor ? `  annotator = {${s.contributor}}` : '',
+  ].filter(Boolean)
+  if (s.bibtex && String(s.bibtex).trim().startsWith('@')) {
+    const raw = String(s.bibtex).trim()
+    const missing = extras.filter((line) => {
+      const field = line.trim().split(/\s*=/)[0]
+      return !new RegExp(`${field}\\s*=`).test(raw)
+    })
+    if (!missing.length) return raw
+    const body = raw.replace(/}\s*$/, '').trimEnd().replace(/,\s*$/, '')
+    return `${body},\n${missing.join(',\n')}\n}`
+  }
+  const lines = [
+    `  author = {${s.author || ''}}`,
+    `  title = {${s.title || ''}}`,
+    `  year = {${s.year || ''}}`,
+    s.publisher ? `  publisher = {${s.publisher}}` : '',
+    s.journal ? `  journal = {${s.journal}}` : '',
+    s.url ? `  url = {${s.url}}` : '',
+    s.doi ? `  doi = {${s.doi}}` : '',
+    ...extras,
+  ].filter(Boolean)
+  return `@${s.entry_type || 'book'}{${s.citekey || 'key'},\n${lines.join(',\n')}\n}`
+}
+
+function bibFile(sources, scope, ts) {
+  const ordered = [...sources].sort((a, b) => String(a.citekey).localeCompare(String(b.citekey)))
+  const byContrib = {}
+  for (const s of ordered) {
+    const c = (s.contributor || '').trim() || 'unattributed'
+    byContrib[c] = (byContrib[c] || 0) + 1
+  }
+  const tally = Object.entries(byContrib).sort((a, b) => b[1] - a[1]).map(([c, n]) => `%   ${c}: ${n}`)
+  const header = [
+    `% xBLiMPs reference bibliography — ${scope}`,
+    `% ${ordered.length} entries. Generated ${ts} by the xBLiMPs annotation platform.`,
+    `% Contributions (attributed):`,
+    ...tally,
+    '',
+  ].join('\n')
+  return header + '\n' + ordered.map(sourceToBibtex).join('\n\n') + '\n'
+}
+
 function readme(title, body) {
   return `---
 license: other
@@ -57,8 +106,44 @@ export function buildArtifacts(db, { stamp, org = 'xBLiMPs' } = {}) {
   }
   for (const k of [...ENTITY_KEYS, ...LEDGER_KEYS]) snapshotFiles[`${k}.jsonl`] = jsonl(arr(db, k))
 
+  // Bibliography dataset — the central, per-language, per-contributor-attributed reference library
+  // as ready-to-cite .bib files (for Overleaf) plus the structured source rows and an attribution
+  // ledger. Built even when empty so the repo exists early (bibliography precedes template work).
+  const sources = arr(db, 'sources')
+  const langs = [...new Set(sources.flatMap((s) => (s.languages && s.languages.length ? s.languages : ['unassigned'])))].sort()
+  const bibFiles = {
+    'references.bib': bibFile(sources, 'all languages', ts),
+    'sources.jsonl': jsonl(sources),
+    'README.md': readme('xBLiMPs — reference bibliography', [
+      `Central BibTeX reference library for the xBLiMPs project — ${sources.length} entries across ${langs.length} language grouping(s). Generated **${ts}**.`,
+      '',
+      '- `references.bib` — every reference (import this into the Overleaf paper).',
+      '- `by-language/<code>.bib` — references scoped to one language.',
+      '- `contributors.jsonl` — per-contributor attribution ledger.',
+      '- `sources.jsonl` — the full structured source rows.',
+      '',
+      'Each entry carries `keywords` (language + phenomenon tags) and an `annotator` field crediting the contributor.',
+    ].join('\n')),
+  }
+  for (const code of langs) {
+    const forLang = sources.filter((s) => (s.languages && s.languages.length ? s.languages : ['unassigned']).includes(code))
+    bibFiles[`by-language/${code}.bib`] = bibFile(forLang, code, ts)
+  }
+  // attribution ledger: one row per contributor with entry count + languages touched
+  const contribMap = {}
+  for (const s of sources) {
+    const c = (s.contributor || '').trim() || 'unattributed'
+    const row = (contribMap[c] ??= { contributor: c, entries: 0, languages: new Set(), citekeys: [] })
+    row.entries++
+    row.citekeys.push(s.citekey)
+    for (const l of (s.languages || [])) row.languages.add(l)
+  }
+  const contributors = Object.values(contribMap).map((r) => ({ ...r, languages: [...r.languages] }))
+  bibFiles['contributors.jsonl'] = jsonl(contributors)
+
   const artifacts = {
     [`${org}/xblimps-snapshot`]: { files: snapshotFiles },
+    [`${org}/xblimps-bibliography`]: { files: bibFiles },
     [`${org}/xblimps-templates`]: {
       files: {
         'templates.jsonl': jsonl(templates),

@@ -5,6 +5,7 @@ import type { SyncState } from './lib/types'
 import WorkspaceView from './modules/workspace/Workspace'
 import Home from './modules/xblimps/Home'
 import Guide from './modules/xblimps/Guide'
+import Bibliography from './modules/xblimps/Bibliography'
 import Board from './modules/board/Board'
 import { STAGES, stageState, stageCount } from './lib/stages'
 import Forge from './modules/xblimps/Forge'
@@ -71,6 +72,10 @@ export default function App() {
                 <button className={`nav-item ${nav.section === 'Guide' ? 'active' : ''}`} onClick={() => go({ workspaceId: null, section: 'Guide' })}>
                   <span className="nav-emoji">📖</span><span>Annotation guide</span>
                 </button>
+                <button className={`nav-item ${nav.section === 'Bibliography' ? 'active' : ''}`} onClick={() => go({ workspaceId: null, section: 'Bibliography', focus: undefined })}>
+                  <span className="nav-emoji">📚</span><span>Bibliography</span>
+                  <span className="nav-count">{store.db.sources.length}</span>
+                </button>
                 <div className="rail-section-label">Languages</div>
                 {langs.map((w) => (
                   <button key={w.id} className="nav-item"
@@ -129,7 +134,8 @@ export default function App() {
         {nav.view === 'board' && <Board />}
         {inXblimps && activeWs && <WorkspaceView workspaceId={activeWs.id} section={nav.section} onSection={(s) => go({ section: s })} />}
         {inXblimps && !activeWs && nav.section === 'Guide' && <Guide />}
-        {inXblimps && !activeWs && nav.section !== 'Guide' && <Home langs={langs} onOpen={(id) => go({ view: 'xblimps', workspaceId: id, section: 'Overview' })} />}
+        {inXblimps && !activeWs && nav.section === 'Bibliography' && <Bibliography initialLanguage={nav.focus} />}
+        {inXblimps && !activeWs && nav.section !== 'Guide' && nav.section !== 'Bibliography' && <Home langs={langs} onOpen={(id) => go({ view: 'xblimps', workspaceId: id, section: 'Overview' })} />}
         {nav.view === 'forge' && <Forge />}
         {nav.view === 'bench' && <Bench />}
         {nav.view === 'roster' && (admin ? <Team /> : <div className="empty"><div className="big">🔒</div>You don't have access to this project.</div>)}

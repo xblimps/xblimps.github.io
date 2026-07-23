@@ -120,6 +120,7 @@ export interface Source extends Identified {
   bibtex: string           // raw entry — round-trips via lib/bibtex.ts
   languages: string[]      // ISO 639 codes this grammar covers
   phenomena: string[]      // phenomenon families / ids it documents
+  contributor?: string     // team member credited with adding/documenting this reference (attribution)
   note?: string
 }
 

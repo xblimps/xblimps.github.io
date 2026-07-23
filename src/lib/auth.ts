@@ -53,6 +53,12 @@ export async function sendMagicLink(email: string): Promise<{ error?: string }> 
   return { error: error?.message }
 }
 
+export async function signInWithPassword(email: string, password: string): Promise<{ error?: string }> {
+  if (!supabase) return { error: 'No backend configured' }
+  const { error } = await supabase.auth.signInWithPassword({ email, password })
+  return { error: error?.message }
+}
+
 export async function signOut() {
   if (supabase) await supabase.auth.signOut()
 }

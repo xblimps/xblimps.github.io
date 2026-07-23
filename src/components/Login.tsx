@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { sendMagicLink, isCloud } from '../lib/auth'
+import { sendMagicLink, signInWithPassword, isCloud } from '../lib/auth'
 import { useApp } from '../state/AppContext'
 
 const PREVIEWS: { role: 'lead' | 'native_speaker'; label: string; icon: string; blurb: string }[] = [
@@ -13,6 +13,9 @@ export default function Login() {
   const [sent, setSent] = useState(false)
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
+  const [password, setPassword] = useState('')
+  const [pwBusy, setPwBusy] = useState(false)
+  const [pwErr, setPwErr] = useState('')
 
   const submit = async () => {
     if (!email.includes('@')) { setErr('Enter a valid email'); return }
@@ -20,6 +23,16 @@ export default function Login() {
     const { error } = await sendMagicLink(email.trim())
     setBusy(false)
     if (error) setErr(error); else setSent(true)
+  }
+
+  const submitPassword = async () => {
+    if (!email.includes('@')) { setPwErr('Enter a valid email'); return }
+    if (!password) { setPwErr('Enter your password'); return }
+    setPwBusy(true); setPwErr('')
+    const { error } = await signInWithPassword(email.trim(), password)
+    setPwBusy(false)
+    // on success, the auth state change reloads the app automatically
+    if (error) setPwErr(error)
   }
 
   return (
@@ -38,12 +51,31 @@ export default function Login() {
               <button className="btn btn-primary" onClick={demoMode}>Enter demo</button>
             </div>
           ) : sent ? (
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: 34, marginBottom: 10 }}>📬</div>
-              <h3 style={{ margin: '0 0 6px' }}>Check your inbox</h3>
-              <p className="muted" style={{ fontSize: 14 }}>We sent a magic sign-in link to <b>{email}</b>. Open it on this device to continue.</p>
-              <button className="btn btn-ghost btn-sm" style={{ marginTop: 12 }} onClick={() => setSent(false)}>Use a different email</button>
-            </div>
+            <>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: 34, marginBottom: 10 }}>📬</div>
+                <h3 style={{ margin: '0 0 6px' }}>Check your inbox</h3>
+                <p className="muted" style={{ fontSize: 14 }}>We sent a magic sign-in link to <b>{email}</b>. Open it on this device to continue.</p>
+                <button className="btn btn-ghost btn-sm" style={{ marginTop: 12 }} onClick={() => setSent(false)}>Use a different email</button>
+              </div>
+
+              <div className="row" style={{ alignItems: 'center', gap: 10, margin: '22px 0 4px' }}>
+                <div style={{ flex: 1, height: 1, background: 'var(--hair)' }} />
+                <span className="faint" style={{ fontSize: 11.5, textTransform: 'uppercase', letterSpacing: '.08em' }}>or log in with your password</span>
+                <div style={{ flex: 1, height: 1, background: 'var(--hair)' }} />
+              </div>
+
+              <label className="lbl">Email</label>
+              <input className="field" type="email" placeholder="you@university.edu" value={email}
+                onChange={(e) => setEmail(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && submitPassword()} />
+              <label className="lbl">Password</label>
+              <input className="field" type="password" placeholder="Your password" value={password}
+                onChange={(e) => setPassword(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && submitPassword()} />
+              {pwErr && <div style={{ color: 'var(--bad)', fontSize: 13, marginTop: 8 }}>{pwErr}</div>}
+              <button className="btn btn-primary" style={{ width: '100%', justifyContent: 'center', marginTop: 16 }} disabled={pwBusy} onClick={submitPassword}>
+                {pwBusy ? 'Logging in…' : 'Login'}
+              </button>
+            </>
           ) : (
             <>
               <label className="lbl" style={{ marginTop: 0 }}>Email address</label>
