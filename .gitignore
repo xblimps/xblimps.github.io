@@ -13,3 +13,6 @@ dist-ssr
 # local demo build artifact
 dist-demo
 .env*
+
+# supabase CLI cache
+supabase/.temp
