@@ -1,12 +1,21 @@
-// Auth + profile access model.
+// Auth + profile access model (Firebase Auth + Firestore).
 //
-// Magic-link sign-in via Supabase Auth. A `profiles` row (created by a signup trigger from
-// invite metadata) carries the user's role, language assignments and app-access list. The
-// `apps` array (e.g. ['xblimps'] or ['xblimps','childes']) is what gates module visibility
-// in the UI and — crucially — what Postgres RLS enforces, so xBLiMPs-only users can neither
-// see nor query CHILDES data.
+// Sign-in is by email/password or email-link ("magic link"). A `profiles/{uid}` Firestore doc
+// carries the user's role, language assignments and app-access list. The `apps` array (e.g.
+// ['xblimps'] or ['xblimps','childes']) gates module visibility in the UI and — crucially —
+// is what the Firestore security rules enforce, so xBLiMPs-only users can neither see nor
+// query CHILDES data.
+//
+// Invites are fully client-side: a coordinator writes an `invites/{email}` doc with the new
+// user's metadata and sends them an email sign-in link. On that user's first login we adopt
+// the invite into their `profiles/{uid}` doc (see loadProfile) and delete the invite.
 
-import { supabase, isCloud } from './supabase'
+import {
+  signInWithEmailAndPassword, sendSignInLinkToEmail, isSignInWithEmailLink,
+  signInWithEmailLink, signOut as fbSignOut, onAuthStateChanged, type User,
+} from 'firebase/auth'
+import { doc, getDoc, setDoc, deleteDoc } from 'firebase/firestore'
+import { auth, fdb, isCloud } from './firebase'
 import type { Role } from './types'
 
 export type AppKey = 'xblimps' | 'childes'
@@ -28,14 +37,13 @@ export const DEMO_PROFILE: Profile = {
 }
 
 // CHILDES annotation is a sole-admin tool under development — only these accounts (and the
-// local-only demo profile, i.e. the developer running it offline) may see it.
+// local-only demo profile, i.e. the developer running it offline) may see it. These emails
+// are also bootstrapped as coordinators on their first login (see loadProfile).
 export const ADMIN_EMAILS = ['sas245@cam.ac.uk', 'suchirsalhan@gmail.com']
 export const isAdmin = (p: Profile) => p.id === 'demo' || ADMIN_EMAILS.includes(p.email.trim().toLowerCase())
 
 // Build a demo profile for a given role — used by the `?demo=<role>` preview override in
-// local mode so leads / native speakers / reviewers can be viewed without a backend. Ids are
-// deliberately NOT 'demo' and emails are not admin emails, so isAdmin() stays false and the
-// admin-only modules (CHILDES, roster, sync ledger) are correctly hidden.
+// local mode so leads / native speakers / reviewers can be viewed without a backend.
 const DEMO_NAME: Record<Role, string> = {
   coordinator: 'You', lead: 'Dr Demo Lead', native_speaker: 'Demo Speaker', reviewer: 'Demo Reviewer',
 }
@@ -44,51 +52,95 @@ export function demoProfile(role: Role): Profile {
   return { id: `demo.${role}`, email: `${role}@demo.local`, name: DEMO_NAME[role], role, languages: [], apps: ['xblimps'], state: 'active' }
 }
 
+const EMAIL_KEY = 'xblimps.emailForSignIn'
+
+// email-link ("magic link") settings — the link returns to this origin, handled in-app.
+const linkSettings = () => ({ url: window.location.origin, handleCodeInApp: true })
+
 export async function sendMagicLink(email: string): Promise<{ error?: string }> {
-  if (!supabase) return { error: 'No backend configured' }
-  const { error } = await supabase.auth.signInWithOtp({
-    email,
-    options: { emailRedirectTo: window.location.origin },
-  })
-  return { error: error?.message }
+  if (!auth) return { error: 'No backend configured' }
+  try {
+    await sendSignInLinkToEmail(auth, email, linkSettings())
+    try { window.localStorage.setItem(EMAIL_KEY, email) } catch { /* private mode */ }
+    return {}
+  } catch (e: any) { return { error: e?.message || 'Could not send link' } }
 }
 
 export async function signInWithPassword(email: string, password: string): Promise<{ error?: string }> {
-  if (!supabase) return { error: 'No backend configured' }
-  const { error } = await supabase.auth.signInWithPassword({ email, password })
-  return { error: error?.message }
+  if (!auth) return { error: 'No backend configured' }
+  try {
+    await signInWithEmailAndPassword(auth, email, password)
+    return {}
+  } catch (e: any) { return { error: e?.message || 'Sign-in failed' } }
+}
+
+// If the current URL is an email sign-in link, complete the sign-in. Called once at boot.
+// Returns true when it consumed a link (so the caller can clean the URL).
+export async function completeEmailLinkSignIn(): Promise<boolean> {
+  if (!auth || !isSignInWithEmailLink(auth, window.location.href)) return false
+  let email = ''
+  try { email = window.localStorage.getItem(EMAIL_KEY) || '' } catch { /* ignore */ }
+  // opened on a different device → we didn't store the email; ask for it.
+  if (!email) email = window.prompt('Confirm your email to finish signing in') || ''
+  if (!email) return false
+  try {
+    await signInWithEmailLink(auth, email, window.location.href)
+    try { window.localStorage.removeItem(EMAIL_KEY) } catch { /* ignore */ }
+    return true
+  } catch { return false }
 }
 
 export async function signOut() {
-  if (supabase) await supabase.auth.signOut()
+  if (auth) await fbSignOut(auth)
 }
 
-export async function currentUserId(): Promise<string | null> {
-  if (!supabase) return null
-  const { data } = await supabase.auth.getUser()
-  return data.user?.id ?? null
+export function currentUserId(): string | null {
+  return auth?.currentUser?.uid ?? null
 }
 
+// Load (and, on first login, provision) the signed-in user's profile.
 export async function loadProfile(): Promise<Profile | null> {
-  if (!supabase) return null
-  const { data: u } = await supabase.auth.getUser()
-  const user = u.user
+  if (!auth || !fdb) return null
+  const user = auth.currentUser
   if (!user) return null
-  const { data, error } = await supabase.from('profiles').select('*').eq('id', user.id).maybeSingle()
-  if (error || !data) {
-    // profile not provisioned yet — minimal default (xblimps only)
-    return { id: user.id, email: user.email ?? '', name: user.email ?? 'User', role: 'native_speaker', languages: [], apps: ['xblimps'], state: 'active' }
+
+  const ref = doc(fdb, 'profiles', user.uid)
+  const snap = await getDoc(ref)
+  if (snap.exists()) {
+    const d = snap.data() as any
+    return {
+      id: user.uid, email: d.email ?? user.email ?? '', name: d.name ?? d.email ?? user.email ?? 'User',
+      role: d.role ?? 'native_speaker', languages: d.languages ?? [], apps: d.apps ?? ['xblimps'], state: d.state ?? 'active',
+    }
   }
-  return {
-    id: data.id, email: data.email, name: data.name ?? data.email,
-    role: data.role, languages: data.languages ?? [], apps: data.apps ?? ['xblimps'], state: data.state ?? 'active',
+
+  // No profile yet → provision one. Prefer an invite; bootstrap admins as coordinators;
+  // otherwise a minimal xBLiMPs-only default.
+  const email = (user.email ?? '').trim().toLowerCase()
+  let provisioned: Profile
+  const invite = email ? await getDoc(doc(fdb, 'invites', email)) : null
+  if (invite?.exists()) {
+    const i = invite.data() as any
+    provisioned = {
+      id: user.uid, email: user.email ?? email, name: i.name ?? user.email ?? 'User',
+      role: i.role ?? 'native_speaker', languages: i.languages ?? [], apps: i.apps ?? ['xblimps'], state: 'active',
+    }
+  } else if (ADMIN_EMAILS.includes(email)) {
+    provisioned = { id: user.uid, email: user.email ?? email, name: user.email ?? 'Coordinator', role: 'coordinator', languages: [], apps: ['xblimps', 'childes'], state: 'active' }
+  } else {
+    provisioned = { id: user.uid, email: user.email ?? email, name: user.email ?? 'User', role: 'native_speaker', languages: [], apps: ['xblimps'], state: 'active' }
   }
+
+  const { id: _id, ...body } = provisioned
+  await setDoc(ref, { ...body, created_at: new Date().toISOString() })
+  if (invite?.exists()) { try { await deleteDoc(doc(fdb, 'invites', email)) } catch { /* best-effort */ } }
+  return provisioned
 }
 
-export function onAuthChange(cb: () => void): () => void {
-  if (!supabase) return () => {}
-  const { data } = supabase.auth.onAuthStateChange(() => cb())
-  return () => data.subscription.unsubscribe()
+// Subscribe to auth changes. Fires immediately with the current user (or null).
+export function onAuthChange(cb: (user: User | null) => void): () => void {
+  if (!auth) { cb(null); return () => {} }
+  return onAuthStateChanged(auth, cb)
 }
 
 export { isCloud }

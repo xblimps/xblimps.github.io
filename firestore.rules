@@ -1,0 +1,47 @@
+rules_version = '2';
+
+// Access model (ported from the former Postgres RLS):
+//   - profiles/{uid}: a user reads/writes their own; coordinators read/write everyone's.
+//   - invites/{email}: coordinators manage; the invitee may read/delete their own on first login.
+//   - records/{row_uid}: a caller may touch a row when its app is in their profile's `apps`
+//     AND the row is either shared (owner == null) or owned by them (owner == uid).
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function profileData() {
+      return get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data;
+    }
+    function myApps() { return profileData().apps; }
+    function isCoordinator() {
+      return exists(/databases/$(database)/documents/profiles/$(request.auth.uid))
+        && profileData().role == 'coordinator';
+    }
+
+    match /profiles/{uid} {
+      // uid == self short-circuits before any get(), so first-login self-provisioning works
+      // even though no profile doc exists yet.
+      allow read, write: if signedIn() && (request.auth.uid == uid || isCoordinator());
+    }
+
+    match /invites/{email} {
+      allow read, write: if signedIn() && isCoordinator();
+      // let the invitee find + clear their own invite when they first sign in
+      allow read, delete: if signedIn() && request.auth.token.email == email;
+    }
+
+    match /records/{row_uid} {
+      allow read: if signedIn() && (
+        resource.data.owner == request.auth.uid ||
+        (resource.data.owner == null && (resource.data.app in myApps()))
+      );
+      allow write: if signedIn() &&
+        (request.resource.data.app in myApps()) &&
+        (request.resource.data.owner == null || request.resource.data.owner == request.auth.uid);
+      allow delete: if signedIn() && (
+        resource.data.owner == request.auth.uid ||
+        (resource.data.owner == null && (resource.data.app in myApps()))
+      );
+    }
+  }
+}

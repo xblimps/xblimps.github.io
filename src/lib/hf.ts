@@ -6,7 +6,7 @@
 // guarantee no information loss regardless of which mode the app is running in.
 
 import { store } from './store'
-import { supabase, fnUrl } from './supabase'
+import { auth, hfSyncUrl } from './firebase'
 
 export interface BackupResult {
   ok: boolean
@@ -18,17 +18,14 @@ export interface BackupResult {
 }
 
 export async function backupToHuggingFace(): Promise<BackupResult> {
-  const auth: Record<string, string> = {}
-  if (supabase) {
-    const anon = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined
-    if (anon) auth.apikey = anon
-    const { data } = await supabase.auth.getSession()
-    const token = data.session?.access_token
-    if (token) auth.Authorization = `Bearer ${token}`
-  }
-  const res = await fetch(fnUrl('hf-sync'), {
+  if (!hfSyncUrl) return { ok: false, error: 'HF backup endpoint not configured' }
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+  // send a Firebase ID token so the backup endpoint can verify a signed-in user
+  const token = await auth?.currentUser?.getIdToken().catch(() => null)
+  if (token) headers.Authorization = `Bearer ${token}`
+  const res = await fetch(hfSyncUrl, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...auth },
+    headers,
     body: JSON.stringify({ db: store.db }),
   })
   const body = (await res.json().catch(() => ({}))) as BackupResult

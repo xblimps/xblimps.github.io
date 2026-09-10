@@ -1,0 +1,13 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "records",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "owner", "order": "ASCENDING" },
+        { "fieldPath": "app", "order": "ASCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

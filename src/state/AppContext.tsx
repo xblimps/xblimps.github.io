@@ -2,8 +2,8 @@ import React, { createContext, useContext, useEffect, useState, useSyncExternalS
 import { store } from '../lib/store'
 import { sync } from '../lib/sync'
 import type { SyncState } from '../lib/types'
-import { isCloud, supabase } from '../lib/supabase'
-import { loadProfile, onAuthChange, signOut, DEMO_PROFILE, demoProfile, type Profile } from '../lib/auth'
+import { isCloud } from '../lib/firebase'
+import { loadProfile, onAuthChange, signOut, completeEmailLinkSignIn, DEMO_PROFILE, demoProfile, type Profile } from '../lib/auth'
 import type { Role } from './../lib/types'
 
 interface Nav {
@@ -79,10 +79,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       return
     }
     let alive = true
-    const boot = async () => {
-      const { data } = await supabase!.auth.getSession()
+    // If we arrived via an email sign-in link, complete it (and tidy the URL) before wiring
+    // up the auth listener, which then fires with the freshly signed-in user.
+    const onUser = async (user: unknown) => {
       if (!alive) return
-      if (!data.session) { setBoot('signed_out'); return }
+      if (!user) { setBoot('signed_out'); return }
       const p = await loadProfile()
       if (!alive) return
       if (p) {
@@ -92,8 +93,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setBoot('ready')
       } else setBoot('signed_out')
     }
-    boot()
-    const unsub = onAuthChange(() => boot())
+    let unsub = () => {}
+    completeEmailLinkSignIn().then((consumed) => {
+      if (consumed && typeof window !== 'undefined') {
+        window.history.replaceState({}, '', window.location.origin + window.location.pathname)
+      }
+      if (alive) unsub = onAuthChange(onUser)
+    })
     return () => { alive = false; unsub() }
   }, [])
 

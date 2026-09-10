@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react'
 import { store } from '../lib/store'
 import { ROSTER } from '../lib/seed'
-import { supabase, isCloud, fnUrl } from '../lib/supabase'
+import { fdb, isCloud } from '../lib/firebase'
+import { sendMagicLink } from '../lib/auth'
+import { collection, doc, getDocs, setDoc, updateDoc, query, orderBy } from 'firebase/firestore'
 import { useApp } from '../state/AppContext'
 import { Modal, Field, useToggle } from './ui'
 
@@ -28,6 +30,7 @@ The xBLiMPs team`
 }
 
 function InviteModal({ onClose }: { onClose: () => void }) {
+  const { profile } = useApp()
   const [email, setEmail] = useState(''); const [name, setName] = useState('')
   const [role, setRole] = useState('native_speaker')
   const [langs, setLangs] = useState<string[]>([])
@@ -42,21 +45,18 @@ function InviteModal({ onClose }: { onClose: () => void }) {
     if (!email.includes('@')) { setMsg('Enter a valid email'); return }
     setBusy(true); setMsg('')
     try {
-      const { data } = await supabase!.auth.getSession()
-      const token = data.session?.access_token
-      const res = await fetch(fnUrl('invite'), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          apikey: import.meta.env.VITE_SUPABASE_ANON_KEY as string,
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ email: email.trim(), name, role, languages: langs, apps, redirectTo: window.location.origin }),
+      const addr = email.trim().toLowerCase()
+      // Provision access up-front: an invites/{email} doc holds the new user's metadata, which
+      // their first login adopts into a profiles/{uid} doc (see loadProfile). Then email them a
+      // sign-in link. Fully client-side — no server needed.
+      await setDoc(doc(fdb!, 'invites', addr), {
+        email: addr, name: name || addr, role, languages: langs, apps,
+        invited_by: profile.email, created_at: new Date().toISOString(),
       })
-      const body = await res.json()
-      if (!res.ok) setMsg(body.error || 'Invite failed')
+      const { error } = await sendMagicLink(addr)
+      if (error) setMsg(error)
       else setMsg(`✓ Invite email sent to ${email}`)
-    } catch (e: any) { setMsg(e.message || 'Network error') }
+    } catch (e: any) { setMsg(e.message || 'Could not send invite') }
     setBusy(false)
   }
 
@@ -110,13 +110,13 @@ function CloudTeam() {
   const [loading, setLoading] = useState(true)
 
   const refresh = async () => {
-    const { data } = await supabase!.from('profiles').select('*').order('created_at')
-    setRows((data as ProfileRow[]) ?? []); setLoading(false)
+    const snap = await getDocs(query(collection(fdb!, 'profiles'), orderBy('created_at')))
+    setRows(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<ProfileRow, 'id'>) }))); setLoading(false)
   }
   useEffect(() => { refresh() }, [])
 
   const updateAccess = async (id: string, field: 'apps' | 'role' | 'state', value: any) => {
-    await supabase!.from('profiles').update({ [field]: value }).eq('id', id)
+    await updateDoc(doc(fdb!, 'profiles', id), { [field]: value })
     refresh()
   }
 

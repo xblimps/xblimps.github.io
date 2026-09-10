@@ -1,11 +1,11 @@
 // Local-first store with an append-only op-log + audit ledger (the zero-loss core),
-// backed by Postgres in cloud mode.
+// backed by Firestore in cloud mode.
 //
 // - Every record has row_uid + rev (monotonic). Writes target row_uid, never index.
 // - Every field mutation appends an Op (client op_id, idempotent) and an AuditEntry.
 // - In demo mode (no backend) state persists to localStorage from a local seed.
-// - In cloud mode state is hydrated from Postgres after login and every change is flushed
-//   to a single `records` table (jsonb payload) keyed on row_uid; RLS scopes rows by app.
+// - In cloud mode state is hydrated from Firestore after login and every change is flushed
+//   to a single `records` collection (one doc per row_uid); security rules scope rows by app.
 
 import type {
   Workspace, Note, Task, FileLink, CalendarEvent,
@@ -15,7 +15,11 @@ import type {
 import { uid, now } from './id'
 import { sync } from './sync'
 import { buildSeed } from './seed'
-import { supabase, isCloud } from './supabase'
+import { fdb, isCloud } from './firebase'
+import {
+  collection, doc, getDocs, query, where, onSnapshot,
+  runTransaction, deleteDoc, writeBatch,
+} from 'firebase/firestore'
 
 export interface DB {
   workspaces: Workspace[]
@@ -97,13 +101,16 @@ class Store {
     this.db.session = { user: profile.name || profile.email, email: profile.email, role: profile.role, uid: profile.id }
     this.myUid = profile.id
     this.myApps = profile.apps ?? ['xblimps']
-    if (supabase) {
-      const { data, error } = await supabase.from('records').select('entity,data')
-      if (!error && data) {
-        for (const row of data as { entity: keyof DB; data: any }[]) {
+    if (fdb) {
+      // Two reads that mirror the security rules: shared rows (owner null) scoped to my apps,
+      // plus every row personally owned by me. Merged into the in-memory collections.
+      for (const q of this.myQueries()) {
+        const rows = await getDocs(q)
+        rows.forEach((d) => {
+          const row = d.data() as { entity: keyof DB; data: any }
           const coll = this.db[row.entity] as unknown as any[]
           if (Array.isArray(coll)) coll.push(row.data)
-        }
+        })
       }
     }
     this.hydrated = true
@@ -111,22 +118,38 @@ class Store {
     this.startRealtime()
   }
 
+  // the shared + personal record queries (kept in one place: hydrate and realtime use them)
+  private myQueries() {
+    const col = collection(fdb!, 'records')
+    const apps = this.myApps.length ? this.myApps : ['xblimps']
+    return [
+      query(col, where('owner', '==', null), where('app', 'in', apps)),
+      query(col, where('owner', '==', this.myUid)),
+    ]
+  }
+
   // ---- realtime: live-merge other clients' record changes ----
-  private channel: any = null
+  private unsubs: (() => void)[] = []
   private myUid: string | null = null
   private myApps: string[] = []
 
   private startRealtime() {
-    if (!supabase) return
+    if (!fdb) return
     this.disconnect()
-    this.channel = supabase
-      .channel('records-stream')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'records' }, (p: any) => this.onRealtime(p))
-      .subscribe()
+    // one snapshot listener per query; docChanges carry added/modified/removed events.
+    this.unsubs = this.myQueries().map((q) =>
+      onSnapshot(q, (snap) => {
+        snap.docChanges().forEach((ch) => {
+          if (ch.type === 'removed') this.removeInbound(ch.doc.id)
+          else this.onRealtime(ch.doc.data())
+        })
+      }, () => { /* transient listen errors self-heal on reconnect */ }),
+    )
   }
 
   disconnect() {
-    if (this.channel && supabase) { supabase.removeChannel(this.channel); this.channel = null }
+    this.unsubs.forEach((u) => { try { u() } catch { /* ignore */ } })
+    this.unsubs = []
   }
 
   // Switch the live (cloud) app into a local, seeded demo session — used by the "default
@@ -140,11 +163,9 @@ class Store {
     this.emit()
   }
 
-  private onRealtime(payload: any) {
-    if (payload.eventType === 'DELETE') { this.removeInbound(payload.old?.row_uid); return }
-    const nw = payload.new
+  private onRealtime(nw: any) {
     if (!nw) return
-    // defence in depth on top of RLS: never apply another user's personal row or a foreign app
+    // defence in depth on top of security rules: never apply another user's personal row or a foreign app
     if (nw.app && this.myApps.length && !this.myApps.includes(nw.app)) return
     if (nw.owner && nw.owner !== this.myUid) return
     this.applyInbound(nw.entity as keyof DB, nw.data, nw.rev)
@@ -194,7 +215,7 @@ class Store {
 
   // flush pending ops: upsert touched records, delete removed ones
   private async flushToCloud(ops: Op[]) {
-    if (!supabase) return
+    if (!fdb) return
     const touched = new Map<string, string>() // row_uid -> entity
     ops.forEach((o) => touched.set(o.row_uid, o.entity))
     const upserts: any[] = []
@@ -205,15 +226,21 @@ class Store {
       if (rec) upserts.push(this.recordRow(entity, rec))
       else deletes.push(row_uid)
     }
-    if (upserts.length) {
-      // rev-guarded conditional upsert; returns the authoritative state of each touched row
-      const { data, error } = await supabase.rpc('apply_records', { _rows: upserts })
-      if (error) throw error
-      if (Array.isArray(data)) for (const row of data as any[]) this.reconcile(row.entity as keyof DB, row.data, row.rev)
+    // rev-guarded upsert per row (replaces the Postgres apply_records RPC): a transaction
+    // reads the current doc and only overwrites when our rev is strictly greater, so the higher
+    // rev always wins and equal-rev races resolve first-commit-wins. When our write loses, we
+    // adopt the authoritative server row via reconcile().
+    for (const row of upserts) {
+      const ref = doc(fdb, 'records', row.row_uid)
+      const authoritative = await runTransaction(fdb, async (tx) => {
+        const cur = await tx.get(ref)
+        if (!cur.exists() || (cur.data() as any).rev < row.rev) { tx.set(ref, row); return row }
+        return cur.data()
+      })
+      this.reconcile(authoritative.entity as keyof DB, authoritative.data, authoritative.rev)
     }
-    if (deletes.length) {
-      const { error } = await supabase.from('records').delete().in('row_uid', deletes)
-      if (error) throw error
+    for (const row_uid of deletes) {
+      await deleteDoc(doc(fdb, 'records', row_uid))
     }
   }
 
@@ -276,18 +303,20 @@ class Store {
 
   // coordinator one-time: push the starter inventory into a fresh Postgres DB
   async seedCloud(apps: string[]) {
-    if (!supabase) return
+    if (!fdb) return
     const seed = buildSeed() as DB
     const rows: any[] = []
     for (const key of ENTITY_KEYS) {
-      if (!apps.includes(appOf(String(key)))) continue   // respect RLS / access
+      if (!apps.includes(appOf(String(key)))) continue   // respect access rules
       for (const rec of (seed[key] as any[])) rows.push(this.recordRow(String(key), rec))
     }
-    for (let i = 0; i < rows.length; i += 200) {
-      const { error } = await supabase.from('records').upsert(rows.slice(i, i + 200), { onConflict: 'row_uid' })
-      if (error) throw error
+    // Firestore batches cap at 500 writes.
+    for (let i = 0; i < rows.length; i += 400) {
+      const batch = writeBatch(fdb)
+      for (const row of rows.slice(i, i + 400)) batch.set(doc(fdb, 'records', row.row_uid), row)
+      await batch.commit()
     }
-    await this.hydrate({ id: '', email: this.db.session.email, name: this.db.session.user, role: this.db.session.role })
+    await this.hydrate({ id: this.myUid ?? '', email: this.db.session.email, name: this.db.session.user, role: this.db.session.role, apps })
   }
 }
 
