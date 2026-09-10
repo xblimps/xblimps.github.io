@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { store } from '../lib/store'
 import { ROSTER } from '../lib/seed'
-import { supabase, isCloud } from '../lib/supabase'
+import { supabase, isCloud, fnUrl } from '../lib/supabase'
 import { useApp } from '../state/AppContext'
 import { Modal, Field, useToggle } from './ui'
 
@@ -44,9 +44,13 @@ function InviteModal({ onClose }: { onClose: () => void }) {
     try {
       const { data } = await supabase!.auth.getSession()
       const token = data.session?.access_token
-      const res = await fetch('/api/invite', {
+      const res = await fetch(fnUrl('invite'), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        headers: {
+          'Content-Type': 'application/json',
+          apikey: import.meta.env.VITE_SUPABASE_ANON_KEY as string,
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({ email: email.trim(), name, role, languages: langs, apps, redirectTo: window.location.origin }),
       })
       const body = await res.json()

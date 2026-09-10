@@ -1,0 +1,9 @@
+project_id = "frdqrqnoijvnqqcnydld"
+
+# We enforce auth inside each function (JWT + role checks), and hf-sync must also serve the
+# demo-mode path, so let requests through the gateway and validate in code.
+[functions.invite]
+verify_jwt = false
+
+[functions.hf-sync]
+verify_jwt = false

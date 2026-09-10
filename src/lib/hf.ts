@@ -6,7 +6,7 @@
 // guarantee no information loss regardless of which mode the app is running in.
 
 import { store } from './store'
-import { supabase } from './supabase'
+import { supabase, fnUrl } from './supabase'
 
 export interface BackupResult {
   ok: boolean
@@ -18,13 +18,15 @@ export interface BackupResult {
 }
 
 export async function backupToHuggingFace(): Promise<BackupResult> {
-  let auth: Record<string, string> = {}
+  const auth: Record<string, string> = {}
   if (supabase) {
+    const anon = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined
+    if (anon) auth.apikey = anon
     const { data } = await supabase.auth.getSession()
     const token = data.session?.access_token
-    if (token) auth = { Authorization: `Bearer ${token}` }
+    if (token) auth.Authorization = `Bearer ${token}`
   }
-  const res = await fetch('/api/hf-sync', {
+  const res = await fetch(fnUrl('hf-sync'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...auth },
     body: JSON.stringify({ db: store.db }),
