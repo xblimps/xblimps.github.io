@@ -1,0 +1,18 @@
+{
+  "name": "xblimps-hf-sync-worker",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Cloudflare Worker that mirrors an xBLiMPs DB snapshot to private HuggingFace datasets",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "dependencies": {
+    "@huggingface/hub": "^1.1.2",
+    "jose": "^5.9.6"
+  },
+  "devDependencies": {
+    "wrangler": "^4.86.0"
+  }
+}

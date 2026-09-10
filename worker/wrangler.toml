@@ -1,0 +1,11 @@
+name = "xblimps-hf-sync"
+main = "src/index.ts"
+compatibility_date = "2026-09-10"
+compatibility_flags = ["nodejs_compat"]
+
+# Public (non-secret) vars. HF_TOKEN is set separately as a secret:
+#   wrangler secret put HF_TOKEN
+[vars]
+FIREBASE_PROJECT_ID = "xblimps-cd802"
+HF_ORG = "xBLiMPs"
+ALLOWED_ORIGIN = "https://xblimps.github.io"
