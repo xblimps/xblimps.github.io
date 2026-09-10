@@ -166,6 +166,8 @@ export default function Forge() {
             <div>{tpl.contrast || phenObj?.hypothesis || 'Build a minimal pair: one grammatical, one not.'}</div>
           </div>
 
+          {/* template (slot inputs) and the random corpus generator, side by side on one line */}
+          <div className="forge-cols">
           {/* priming panel — length-varied corpus sentences for lexical / topic diversity */}
           {hasBank(lang) && (
             <div className="prime">
@@ -210,6 +212,7 @@ export default function Forge() {
               </div>
             ))}
           </div>
+          </div>{/* /forge-cols */}
 
           {/* the minimal-pair card (signature) */}
           <div className={`mp-card ${flash ? 'accept-flash' : ''}`} style={{ marginTop: 18 }}>

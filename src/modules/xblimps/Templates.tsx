@@ -13,6 +13,7 @@ import SyntaxTree from '../../components/SyntaxTree'
 import { parseBracketTree, serializeIndented } from '../../lib/tree'
 import { PERTURBATION_TYPES } from '../../lib/perturbations'
 import { expandTemplate, deriveAnalysis, fill } from '../../lib/derive'
+import { downloadText } from '../../lib/download'
 
 const STATUS_HUE: Record<TemplateStatus, string> = {
   draft: '#7A5C2E', in_review: '#185FA5', validated: '#1D9E75', flagged: '#D85A30',
@@ -297,13 +298,28 @@ export default function Templates({ language }: { language: string }) {
     store.upsert('templates', t)
   }
 
+  // Manual JSON export (avoid information loss): download all templates / minimal pairs for
+  // this language straight from the in-memory store.
+  const exportTemplates = () => {
+    const rows = store.db.templates.filter((t) => t.language === language)
+    downloadText(`xblimps-${language}-templates.json`, JSON.stringify(rows, null, 2), 'application/json')
+  }
+  const exportPairs = () => {
+    const rows = store.db.pairs.filter((p) => p.language === language)
+    downloadText(`xblimps-${language}-minimal-pairs.json`, JSON.stringify(rows, null, 2), 'application/json')
+  }
+
   return (
     <div>
       <div className="between" style={{ marginBottom: 16 }}>
         <select className="field" style={{ width: 'auto' }} value={phenId} onChange={(e) => setPhenId(e.target.value)}>
           {phen.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}
         </select>
-        <button className="btn btn-primary" onClick={add}>+ New template</button>
+        <div className="row" style={{ gap: 8 }}>
+          <button className="btn btn-ghost btn-sm" title="Download every template for this language as JSON" onClick={exportTemplates}>⭳ Templates JSON</button>
+          <button className="btn btn-ghost btn-sm" title="Download every minimal pair for this language as JSON" onClick={exportPairs}>⭳ Pairs JSON</button>
+          <button className="btn btn-primary" onClick={add}>+ New template</button>
+        </div>
       </div>
       {templates.map((t) => <Editor key={t.row_uid} tpl={t} />)}
       {templates.length === 0 && <div className="empty"><div className="big">🧩</div>No template yet for this phenomenon.</div>}
