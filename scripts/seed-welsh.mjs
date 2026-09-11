@@ -17,6 +17,7 @@ const COMMIT = `${DB}:commit`
 const H = { Authorization: `Bearer ${TOKEN}`, 'Content-Type': 'application/json' }
 const now = () => new Date().toISOString()
 const PRIMARY = 'src.borsley2009'
+const CONTRIB = 'sas245'
 
 function toVal(v) {
   if (v === null || v === undefined) return { nullValue: null }
@@ -34,10 +35,10 @@ const NAMEBASE = `projects/${PROJECT_ID}/databases/(default)/documents`
 function updateWrite(entity, data) {
   return { update: { name: `${NAMEBASE}/records/${data.row_uid}`, fields: toFields({
     row_uid: data.row_uid, entity, app: 'xblimps', owner: null,
-    language: data.language ?? null, workspace_id: null, rev: 1, data, updated_at: now(), updated_by: 'seed',
+    language: data.language ?? null, workspace_id: null, rev: 1, data, updated_at: now(), updated_by: CONTRIB,
   }) } }
 }
-const stamp = () => ({ row_uid: randomUUID(), rev: 1, updated_at: now(), updated_by: 'seed', owner: null })
+const stamp = () => ({ row_uid: randomUUID(), rev: 1, updated_at: now(), updated_by: CONTRIB, owner: null })
 async function commit(writes) {
   for (let i = 0; i < writes.length; i += 400) {
     const r = await fetch(COMMIT, { method: 'POST', headers: H, body: JSON.stringify({ writes: writes.slice(i, i + 400) }) })
@@ -108,9 +109,13 @@ for (const pr of (data.pairs || [])) {
     contrast_tokens: pr.contrast_tokens || [], parse_good: '', parse_bad: '', gloss: pr.note || '', conll: '',
     features: {}, feature_contrast: '', paradigm: 'lexical',
     perturbation: { type: 'feature_change', target: 'root', relation: '', depth: 0, description: pr.note || '' },
-    translation: pr.translation || '', fillers: {}, author: 'seed', status: pr.good ? 'accepted' : 'candidate', notes: pr.note || '' }))
+    translation: pr.translation || '', fillers: {}, author: CONTRIB, status: pr.good ? 'accepted' : 'candidate', notes: pr.note || '' }))
   nPair++
 }
+// credit the Welsh reference grammar to the contributor
+const borsley = all.find((d) => d.fields.entity === 'sources' && d.fields.data?.id === PRIMARY)
+if (borsley) writes.push(updateWrite('sources', { ...borsley.fields.data, contributor: CONTRIB }))
+
 console.log(`uploading ${nP} phenomena, ${nT} templates, ${nPair} pairs…`)
 await commit(writes)
 console.log('Welsh reseed done.')
