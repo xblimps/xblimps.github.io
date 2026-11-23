@@ -9,7 +9,8 @@ import { Modal, Field, useToggle } from './ui'
 
 const STATES = ['invited', 'access_granted', 'trained', 'active', 'complete']
 const STATE_LABEL: Record<string, string> = { invited: 'Invited', access_granted: 'Access granted', trained: 'Trained', active: 'Active', complete: 'Complete' }
-const LANG_OPTS = [['cy', 'Welsh'], ['fa', 'Persian'], ['af', 'Afrikaans'], ['tl', 'Tagalog'], ['ca', 'Catalan'], ['fr', 'French'], ['de', 'German']]
+// project languages (ACL 2027 dataset), then prospective ones
+const LANG_OPTS = [['af', 'Afrikaans'], ['eu', 'Basque'], ['ca', 'Catalan'], ['en', 'English'], ['fr', 'French'], ['fa', 'Persian'], ['es', 'Spanish'], ['tl', 'Tagalog'], ['cy', 'Welsh'], ['de', 'German']]
 
 interface ProfileRow { id: string; email: string; name: string; role: string; languages: string[]; apps: string[]; state: string }
 
@@ -21,7 +22,7 @@ Hello ${name || '[name]'},
 
 We are a group of linguists and computer scientists from the University of Cambridge creating better language technologies for under-studied languages. As part of this, we are creating datasets used to test how well language models have learned the grammatical structures of a given language.
 
-To help construct these datasets, we are recruiting native speakers of several languages. We are contacting you because we believe you may be able to help with our ${L} dataset. Involvement would consist of creating example sentences in ${L} for around ten grammatical phenomena already selected by our team of linguists. Each phenomenon requires around 100 sentences, so we estimate an overall commitment of about ${hours || '[X]'} hours. We would compensate contributors £${amount || '[amount]'} for their contributions, and would also like to invite them to be authors of the dataset and the resulting published article.
+To help construct these datasets, we are recruiting native speakers of several languages. We are contacting you because we believe you may be able to help with our ${L} dataset. Involvement would consist of writing sentence templates in ${L} (sentences with a few alternative words in each position) for around ten grammatical phenomena already selected by our team of linguists. Each phenomenon needs around 100 templates, so we estimate an overall commitment of about ${hours || '[X]'} hours. We would compensate contributors £${amount || '[amount]'} for their contributions, and everyone who completes at least one batch is acknowledged by name in the resulting published article.
 
 If you would be interested, we are happy to provide more information or answer any questions.
 

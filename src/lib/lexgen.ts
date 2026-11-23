@@ -282,7 +282,7 @@ const COMMA_NOTE = /commas?\s+(?:are|is)\s+not\s+(?:a\s+)?(?:delimiters?|separat
 export interface SheetTemplate {
   template: LexTemplate
   headerRow: number          // 1-based row of the header in the pasted tab
-  dataRows: number[]         // 1-based rows of the seed rows
+  dataRows: number[]         // 1-based rows of the template rows
 }
 
 function isHeaderRow(cells: string[], useMarker: boolean): { start: number; end: number } | null {
@@ -303,7 +303,7 @@ function isHeaderRow(cells: string[], useMarker: boolean): { start: number; end:
 /**
  * Split a whole sheet tab (copied from Google Sheets / Excel, or a CSV export) into its templates.
  * Works on the layouts the language sheets use: macro / sub labels in the left columns, a header
- * row of {slots} (optionally after a "Templates:" cell), then seed rows of alternatives; several
+ * row of {slots} (optionally after a "Templates:" cell), then template rows of alternatives; several
  * templates stacked in one tab; "Note: commas are not a delimiter in the X cell" notes.
  */
 export function sheetToTemplates(text: string): SheetTemplate[] {
@@ -572,3 +572,69 @@ export const DEMO_TEMPLATE_TEXT = [
 ].join('\n')
 
 export const demoTemplate = (): LexTemplate => templateFromText(DEMO_TEMPLATE_TEXT, 'distractor_agree_rc')
+
+// ---------- review-fatigue checks (deduplication, lexical repetition) ----------
+
+/**
+ * Drop repeated minimal pairs (same ✓ and same ✗ sentence), keeping the first occurrence and the
+ * original order. Repeats arise when an alternative is listed twice, when an optional slot's empty
+ * option meets an explicit ∅, or when two templates of a tab share a row. Nobody should review the
+ * same pair twice.
+ */
+export function dedupePairs<T extends { good: string; bad: string }>(pairs: T[]): { pairs: T[]; removed: number } {
+  const seen = new Set<string>()
+  const out: T[] = []
+  for (const p of pairs) {
+    const k = p.good + '\u0000' + p.bad
+    if (seen.has(k)) continue
+    seen.add(k)
+    out.push(p)
+  }
+  return { pairs: out, removed: pairs.length - out.length }
+}
+
+export interface RepeatedWord {
+  word: string
+  templates: number        // number of templates (rows) whose varying slots contain the word
+  where: string[]          // "<slot pattern name> · template <n>" for the first few
+}
+
+/** Words of at least this many letters are counted (shorter ones are mostly function words). */
+export const REPEAT_MIN_LETTERS = 4
+
+/**
+ * Lexical repetition across a sheet: for every word in the varying slots (cells with two or more
+ * alternatives), the number of templates (rows) it appears in. A word that turns up in many
+ * templates (the French pilot's "fatiguée") makes native-speaker review repetitive. Fixed slots
+ * (a single alternative, e.g. a relativiser) are skipped because they repeat by design. Purely a
+ * count over what people typed: nothing is suggested or replaced.
+ */
+export function repeatedWords(templates: LexTemplate[], minLetters = REPEAT_MIN_LETTERS): RepeatedWord[] {
+  const count = new Map<string, { n: number; where: string[] }>()
+  for (const t of templates) {
+    t.rows.forEach((cells, r) => {
+      const words = new Set<string>()
+      t.columns.forEach((c, ci) => {
+        if (c.role === 'off') return
+        const alts = splitAlternatives(cells[ci] ?? '', c.role, !!c.literal)
+        if (alts.length < 2 && c.role === 'shared') return
+        for (const a of alts) {
+          for (const w of a.toLocaleLowerCase().split(/[^\p{L}\p{M}'’-]+/u)) {
+            const core = w.replace(/^['’-]+|['’-]+$/g, '')
+            if ((core.match(/\p{L}/gu)?.length ?? 0) >= minLetters) words.add(core)
+          }
+        }
+      })
+      for (const w of words) {
+        const e = count.get(w) ?? { n: 0, where: [] }
+        e.n++
+        if (e.where.length < 4) e.where.push(`${t.name} · template ${r + 1}`)
+        count.set(w, e)
+      }
+    })
+  }
+  return [...count.entries()]
+    .map(([word, e]) => ({ word, templates: e.n, where: e.where }))
+    .filter((x) => x.templates >= 2)
+    .sort((a, b) => b.templates - a.templates || a.word.localeCompare(b.word))
+}

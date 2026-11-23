@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import {
   analyse, demoTemplate, expandAll, pairsToDelimited, parseCSV, splitAlternatives,
   templateFromText, templateToTSV, DEFAULT_OPTIONS, HARD_CAP,
-  sheetToTemplates, samplePairs, parseTSV, manyToDelimited,
+  sheetToTemplates, samplePairs, parseTSV, manyToDelimited, dedupePairs, repeatedWords,
 } from '../src/lib/lexgen'
 
 let n = 0
@@ -207,4 +207,28 @@ test('three-example sample is spread, distinct and deterministic', () => {
   assert.equal(s1[0], 'The refrigerator that stores all the cakes runs too cold.')
 })
 
-console.log(`\n${n} tests passed`)
+
+test('dedupePairs drops repeated pairs and keeps order', () => {
+  const t = templateFromText('{a}\t{b} ✓\t*{c} ✗\n(x, x, y)\t(p)\t(q)')
+  const all = expandAll(t)
+  assert.equal(all.length, 3)
+  const d = dedupePairs(all)
+  assert.equal(d.removed, 1)
+  assert.deepEqual(d.pairs.map((p) => p.good), ['X p.', 'Y p.'])
+})
+
+test('repeatedWords counts words across templates, skipping fixed slots', () => {
+  const t = templateFromText([
+    '{subj}\t{rel}\t{adj} ✓\t*{adj_bad} ✗',
+    '(la fille, la femme)\tqui\t(fatiguée, contente)\t(fatigué, content)',
+    '(la voisine, la mère)\tqui\t(fatiguée, ravie)\t(fatigué, ravi)',
+    '(la sœur, la tante)\tqui\t(fatiguée, prête)\t(fatigué, prêt)',
+  ].join('\n'), 'P1')
+  const r = repeatedWords([t])
+  assert.equal(r[0].templates, 3)
+  assert.ok(r.some((x) => x.word === 'fatiguée' && x.templates === 3))
+  assert.ok(!r.some((x) => x.word === 'qui'), 'fixed slot skipped')
+  assert.ok(r.some((x) => x.word === 'fatigué' && x.templates === 3))
+})
+console.log(`
+${n} tests passed`)

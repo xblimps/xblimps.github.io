@@ -1,17 +1,21 @@
-// Lexical generator: the principal tool of the site. A lead or native speaker writes a template
-// (slot headers + per-slot alternatives, with one ✓ and one ✗ slot) and gets every minimal pair.
+// Lexical generator: the central tool of the site. A lead or contributor pastes or writes a slot
+// pattern (slot headers, one ✓ and one ✗ slot) and one or more templates (rows of per-slot
+// alternatives) and gets every minimal pair, deduplicated. The sheet check (SheetImport) sits beside
+// it for whole language-sheet tabs.
 // Deterministic Cartesian product over human-written alternatives (src/lib/lexgen.ts): no model,
 // no network, no randomness. Nothing typed here leaves the browser.
 
 import React, { useEffect, useMemo, useState } from 'react'
 import {
-  analyse, demoTemplate, expand, pairsToDelimited, splitAlternatives, templateFromText, templateToTSV,
+  analyse, dedupePairs, demoTemplate, expand, pairsToDelimited, splitAlternatives, templateFromText, templateToTSV,
   DEFAULT_OPTIONS, WARN_PER_ROW, WARN_TOTAL, type LexOptions, type LexTemplate, type SlotRole, type GeneratedPair,
 } from '../lib/lexgen'
 import { downloadText, copyText } from '../lib/download'
 import SheetImport from './SheetImport'
 
 const PREVIEW_N = 200
+/** Count unique pairs live only up to this many generated pairs (beyond it, only at download). */
+const UNIQUE_LIVE_MAX = 20000
 const STORE_KEY = 'xblimps.lexgen.v1'
 
 const ROLE_LABEL: Record<SlotRole, string> = { shared: 'shared slot', good: '✓ correct', bad: '✗ incorrect', off: 'leave out' }
@@ -29,7 +33,7 @@ function save(t: LexTemplate, o: LexOptions) {
   try { localStorage.setItem(STORE_KEY, JSON.stringify({ t, o })) } catch { /* ignore */ }
 }
 
-const safeName = (s: string) => (s.trim() || 'template').replace(/[^\w.-]+/g, '_')
+const safeName = (s: string) => (s.trim() || 'slot_pattern').replace(/[^\w.-]+/g, '_')
 
 function Pair({ p, goodCol, badCol }: { p: GeneratedPair; goodCol: number; badCol: number }) {
   // highlight the contrast filler inside each sentence (first occurrence, case-insensitive)
@@ -60,11 +64,25 @@ export default function Generator() {
   useEffect(() => { if (!toast) return; const h = setTimeout(() => setToast(''), 2200); return () => clearTimeout(h) }, [toast])
 
   const a = useMemo(() => analyse(t), [t])
+  // preview: the first PREVIEW_N distinct pairs (repeats are skipped, as in the download)
   const preview = useMemo(() => {
     if (!a.ok) return []
     const out: GeneratedPair[] = []
-    for (const p of expand(t, o, a)) { out.push(p); if (out.length >= PREVIEW_N) break }
+    const seen = new Set<string>()
+    for (const p of expand(t, o, a)) {
+      const k = p.good + '\u0000' + p.bad
+      if (seen.has(k)) continue
+      seen.add(k); out.push(p)
+      if (out.length >= PREVIEW_N) break
+    }
     return out
+  }, [t, o, a])
+  // repeated pairs (same ✓ and ✗ sentence), counted live for templates of a reasonable size
+  const repeats = useMemo(() => {
+    if (!a.ok || a.total > UNIQUE_LIVE_MAX) return null
+    const seen = new Set<string>()
+    for (const p of expand(t, o, a)) seen.add(p.good + '\u0000' + p.bad)
+    return a.total - seen.size
   }, [t, o, a])
 
   // ---- editing helpers ----
@@ -92,14 +110,16 @@ export default function Generator() {
   const importPaste = () => {
     const nt = templateFromText(paste, t.name)
     if (nt.columns.length === 0) { setToast('Nothing to import'); return }
-    setT(nt); setShowPaste(false); setPaste(''); setToast(`Imported ${nt.columns.length} slots × ${nt.rows.length} row(s)`)
+    setT(nt); setShowPaste(false); setPaste(''); setToast(`Imported ${nt.columns.length} slots × ${nt.rows.length} template${nt.rows.length === 1 ? '' : 's'}`)
   }
 
-  const all = () => (a.ok ? Array.from(expand(t, o, a)) : [])
+  // every pair, deduplicated: nobody should review the same pair twice
+  const all = () => (a.ok ? dedupePairs(Array.from(expand(t, o, a))) : { pairs: [], removed: 0 })
   const dl = (sep: ',' | '\t') => {
-    const pairs = all()
+    const { pairs, removed } = all()
     if (!pairs.length) return
     const body = pairsToDelimited(t, pairs, sep)
+    setToast(`${pairs.length.toLocaleString('en-GB')} unique pairs${removed ? ` (${removed} repeated removed)` : ''}`)
     downloadText(`${safeName(t.name)}_pairs.${sep === ',' ? 'csv' : 'tsv'}`, (sep === ',' ? '﻿' : '') + body, sep === ',' ? 'text/csv' : 'text/tab-separated-values')
   }
 
@@ -111,54 +131,79 @@ export default function Generator() {
       if (c.role === 'shared') parts.push(String(Math.max(1, plan.alts[ci].length)))
       else if (c.role === 'good') parts.push(`${plan.pairs.length}✓✗`)
     })
-    return `${parts.join(' × ')} = ${plan.count.toLocaleString('en-GB')}`
+    return `${parts.join(' × ')} = ${plan.count.toLocaleString('en-GB')} pairs`
   }
 
   const errors = a.issues.filter((i) => i.level === 'error')
   const others = a.issues.filter((i) => i.level !== 'error')
+
+  const openPaste = () => {
+    setShowPaste(true)
+    document.getElementById('template-panel')?.scrollIntoView({ behavior: 'smooth' })
+  }
+  const openSheet = () => document.getElementById('sheet-panel')?.scrollIntoView({ behavior: 'smooth' })
 
   return (
     <div>
       <div className="gen-hero">
         <div>
           <div className="eyebrow-s">xBLiMPs · lexical generation</div>
-          <h1>Turn one template row into every minimal pair</h1>
+          <h1>From template to minimal pairs</h1>
           <p>
-            Write the slot headers and, under each slot, the words that can naturally go there. The generator
-            combines them into every ✓ / ✗ pair, so you can check the set, download it and paste it into your
-            language sheet.
+            Paste a template row from your language sheet, or a whole sheet tab. The generator expands the alternatives in every slot
+            into ✓ / ✗ minimal pairs, removes repeats, and lets you read, download and paste them back into your sheet.
           </p>
-          <div className="no-ai">✓ No AI: every word comes from the alternatives you write. Same input, same output. Nothing leaves your browser.</div>
-        </div>
-        <div className="gen-roles">
-          <a className="btn" href="#/guide/lead">I'm a language lead →</a>
-          <a className="btn" href="#/guide/native">I'm a native speaker →</a>
+          <div className="target-strip">
+            <span><b>Template</b> = one sheet row, 3–4 alternatives in every varying slot. The unit that counts.</span>
+            <span><b>Target</b>: ~1,000 templates per language (10 macrophenomena × 100) → ~10,000 generated sentences, by 11 Dec.</span>
+            <span>Generated sentences do not count. <a href="#/guide">Guide →</a></span>
+          </div>
+          <div className="no-ai">✓ No AI: every word comes from the alternatives people write. Same input, same output. Nothing leaves your browser.</div>
         </div>
       </div>
 
-      {/* ---- 0. whole sheet tab ---- */}
-      <SheetImport o={o} onOpen={(nt) => {
-        setT(nt); setToast(`Opened ${nt.name}`)
-        document.getElementById('template-panel')?.scrollIntoView({ behavior: 'smooth' })
-      }} />
+      <div className="entry-grid">
+        <div className="entry-card">
+          <div className="eyebrow-s">One slot pattern</div>
+          <h3>Generate from template rows</h3>
+          <p>Paste the header row (the slot pattern) and one or more template rows, or edit the grid below. Mark the ✓ and ✗ slots; every combination is listed.</p>
+          <div className="entry-actions">
+            <button className="btn btn-primary btn-sm" onClick={openPaste}>Paste template rows</button>
+            <button className="btn btn-sm" onClick={() => { setT(demoTemplate()); setO(DEFAULT_OPTIONS); setToast('Worked example loaded'); document.getElementById('template-panel')?.scrollIntoView({ behavior: 'smooth' }) }}>Load the worked example</button>
+          </div>
+        </div>
+        <div className="entry-card">
+          <div className="eyebrow-s">A whole tab</div>
+          <h3>Check a language sheet</h3>
+          <p>Paste a whole tab: every slot pattern is found and checked, templates are counted against the targets, words repeated across templates are listed, and all pairs download at once.</p>
+          <div className="entry-actions">
+            <button className="btn btn-sm" onClick={openSheet}>Open the sheet check ↓</button>
+            <a className="btn btn-sm btn-ghost" href="#/guide/write">How to write a template</a>
+          </div>
+        </div>
+      </div>
 
       {/* ---- 1. template ---- */}
       <div className="panel" id="template-panel">
         <div className="panel-head">
-          <span className="step-n">1</span><h2>Template</h2>
+          <span className="step-n">1</span><h2>Slot pattern and templates</h2>
           <input className="field" style={{ maxWidth: 240, padding: '5px 9px', fontSize: 13 }} value={t.name}
-            aria-label="Template name" onChange={(e) => setT({ ...t, name: e.target.value })} />
+            aria-label="Slot pattern name" onChange={(e) => setT({ ...t, name: e.target.value })} />
           <span className="spacer" />
           <button className="btn btn-sm" onClick={() => setShowPaste((v) => !v)}>{showPaste ? 'Close paste' : 'Paste from sheet'}</button>
-          <button className="btn btn-sm" onClick={async () => setToast((await copyText(templateToTSV(t))) ? 'Template copied (tab-separated)' : 'Copy failed')}>Copy template</button>
-          <button className="btn btn-sm" onClick={() => { setT(demoTemplate()); setO(DEFAULT_OPTIONS); setToast('Demo restored') }}>Load demo</button>
-          <button className="btn btn-sm btn-ghost" onClick={() => setT({ name: 'template', columns: [{ label: '{slot_1}', role: 'shared' }, { label: '{target}', role: 'good' }, { label: '{target_bad}', role: 'bad' }], rows: [['', '', '']] })}>Clear</button>
+          <button className="btn btn-sm" onClick={async () => setToast((await copyText(templateToTSV(t))) ? 'Templates copied (tab-separated)' : 'Copy failed')}>Copy templates</button>
+          <button className="btn btn-sm" onClick={() => { setT(demoTemplate()); setO(DEFAULT_OPTIONS); setToast('Worked example loaded') }}>Worked example</button>
+          <button className="btn btn-sm btn-ghost" onClick={() => setT({ name: 'slot pattern', columns: [{ label: '{slot_1}', role: 'shared' }, { label: '{target}', role: 'good' }, { label: '{target_bad}', role: 'bad' }], rows: [['', '', '']] })}>Clear</button>
         </div>
         <div className="panel-body">
+          <div className="faint" style={{ fontSize: 12.5, marginBottom: 10 }}>
+            The header row is the <b>slot pattern</b>; each row under it is one <b>template</b>, with 3–4 alternatives in every varying slot
+            (including ✓ and ✗). Every alternative in a row must make sense with every other one, because the generator combines them all.
+          </div>
           {showPaste && (
             <div style={{ marginBottom: 14 }}>
               <div className="muted" style={{ fontSize: 13, marginBottom: 6 }}>
-                Copy the header row and one or more rows from your sheet (Google Sheets / Excel cells paste as tab-separated), or paste
+                Copy the header row and one or more template rows from your sheet (Google Sheets / Excel cells paste as tab-separated), or paste
                 CSV or a Markdown table. Mark the grammatical header with <b>✓</b> and the ungrammatical one with <b>✗</b> (or start it with <b>*</b>).
                 Separate alternatives with commas (Persian <b>،</b> works too). For a real comma inside an alternative, double it
                 (<b>Segons la meva mare,, Em van dir que</b>), end a single alternative with it (<b>(partir,)</b>), or separate the
@@ -198,7 +243,7 @@ export default function Generator() {
               <tbody>
                 {t.rows.map((r, ri) => (
                   <tr key={ri}>
-                    <td className="rown">row {ri + 1}<br /><button className="btn btn-ghost btn-sm" style={{ padding: '2px 4px' }} title="Remove row" onClick={() => delRow(ri)}>×</button></td>
+                    <td className="rown">template {ri + 1}<br /><button className="btn btn-ghost btn-sm" style={{ padding: '2px 4px' }} title="Remove template" onClick={() => delRow(ri)}>×</button></td>
                     {t.columns.map((c, ci) => {
                       const n = splitAlternatives(r[ci] ?? '', c.role).length
                       return (
@@ -216,7 +261,7 @@ export default function Generator() {
             </table>
           </div>
           <div style={{ display: 'flex', gap: 8, marginTop: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-            <button className="btn btn-sm" onClick={addRow}>+ row</button>
+            <button className="btn btn-sm" onClick={addRow}>+ template</button>
             <span className="faint" style={{ fontSize: 12.5 }}>
               The ✓ and ✗ alternatives are matched by position: the 1st ✓ goes with the 1st ✗, the 2nd with the 2nd, and so on.
             </span>
@@ -246,14 +291,15 @@ export default function Generator() {
           <button className="btn btn-sm btn-primary" disabled={!a.ok || a.total === 0} onClick={() => dl(',')}>Download CSV</button>
           <button className="btn btn-sm" disabled={!a.ok || a.total === 0} onClick={() => dl('\t')}>Download TSV</button>
           <button className="btn btn-sm" disabled={!a.ok || a.total === 0}
-            onClick={async () => setToast((await copyText(pairsToDelimited(t, all(), '\t'))) ? 'Pairs copied: paste into a sheet' : 'Copy failed')}>Copy for sheet</button>
+            onClick={async () => setToast((await copyText(pairsToDelimited(t, all().pairs, '\t'))) ? 'Pairs copied: paste into a sheet' : 'Copy failed')}>Copy for sheet</button>
         </div>
         <div className="panel-body">
           <div style={{ display: 'flex', gap: 18, alignItems: 'baseline', flexWrap: 'wrap' }}>
             <div className="count-big">{a.ok ? a.total.toLocaleString('en-GB') : '–'}</div>
             <div className="muted">
-              minimal pair{a.total === 1 ? '' : 's'} from {a.plans.length} row{a.plans.length === 1 ? '' : 's'}
-              {a.ok && a.total > PREVIEW_N && <> · showing the first {PREVIEW_N}</>}
+              generated pair{a.total === 1 ? '' : 's'} from <b>{a.plans.length} template{a.plans.length === 1 ? '' : 's'}</b> (templates count; generated pairs do not)
+              {repeats != null && repeats > 0 && <> · {repeats.toLocaleString('en-GB')} repeated pair{repeats === 1 ? '' : 's'} removed from the preview and downloads</>}
+              {a.ok && a.total > PREVIEW_N && <> · showing the first {PREVIEW_N} distinct</>}
             </div>
           </div>
 
@@ -262,7 +308,7 @@ export default function Generator() {
               <b>The combinations are exploding.</b> More than {WARN_PER_ROW.toLocaleString('en-GB')} pairs from one row
               (or {WARN_TOTAL.toLocaleString('en-GB')} in total) usually means some alternatives do not combine naturally with each other,
               and nobody can check that many by hand. Keep each slot to the options that work with <i>every</i> option in the other slots,
-              or split the row into several smaller rows. Alternatives are not counted toward your total: the rows are.
+              or split the row into several smaller rows. Generated pairs and alternatives do not count toward your total: templates (rows) do.
             </div>
           )}
 
@@ -285,6 +331,12 @@ export default function Generator() {
         </div>
       </div>
 
+      {/* ---- sheet check, beside the generator ---- */}
+      <SheetImport o={o} onOpen={(nt) => {
+        setT(nt); setToast(`Opened ${nt.name}`)
+        document.getElementById('template-panel')?.scrollIntoView({ behavior: 'smooth' })
+      }} />
+
       {/* ---- 3. check ---- */}
       <div className="panel">
         <div className="panel-head"><span className="step-n">3</span><h2>Check before you use them</h2></div>
@@ -293,12 +345,13 @@ export default function Generator() {
           <ul style={{ marginTop: 0 }}>
             <li>the ✓ sentence is something a native speaker would naturally say or write;</li>
             <li>the ✗ sentence is wrong <b>only</b> because of the target phenomenon (for agreement: agreement, not tense or word choice);</li>
-            <li>the template's construction is unchanged: only the words inside the slots differ;</li>
+            <li>the slot pattern is unchanged: only the words inside the slots differ, and the row is consistent for gender, number and so on;</li>
             <li>no option clashes with another (e.g. a verb that cannot take one of the objects), and nothing is offensive or names a real person.</li>
           </ul>
           <p style={{ marginBottom: 0 }}>
-            If one combination fails, remove that alternative or move it to its own row. If the template itself seems impossible in your
-            language, <a href="#/guide/native">flag it</a> to your language lead rather than changing it. More in <a href="#/guide/help">common mistakes</a>.
+            Vary your words across templates, too: the sheet check lists words that recur in many templates. If one combination fails, remove that
+            alternative or move it to its own row. If the slot pattern itself seems impossible in your language, <a href="#/guide/native">flag it</a> to
+            your language lead rather than changing it. More in <a href="#/guide/write">how to write a template</a> and <a href="#/guide/help">common mistakes</a>.
           </p>
         </div>
       </div>

@@ -1,16 +1,24 @@
 # xBLiMPs: lexical generator, instructions and annotation platform
 
-The site opens on the **lexical generator** (`#/`): a lead or native speaker enters a template
-(slot headers + per-slot alternatives, one ✓ and one ✗ slot) and the tool expands every
-combination into minimal pairs (deterministic Cartesian product, ✓/✗ paired by position), with a
-count, preview, warnings when combinations explode, and CSV/TSV download. It never calls a model
-and never writes words: every token comes from the human-written alternatives
+The site opens on the **lexical generator** (`#/`), the central tool. Two entry points sit side by
+side: paste a slot pattern (slot headers, one ✓ and one ✗ slot) with one or more **templates** (rows
+of 3–4 alternatives per slot), or paste a whole language-sheet tab into the **sheet check**. The
+generator expands every combination into minimal pairs (deterministic Cartesian product, ✓/✗ paired
+by position), removes repeated pairs, and offers a count, preview, warnings when combinations
+explode, and CSV/TSV download. The sheet check finds every slot pattern in a tab, counts templates
+against the targets (10 macrophenomena × 100 = ~1,000 templates per language; ≤3 subphenomena,
+2 → 50, 3 → ≥33 each) and lists words repeated across many templates (review-fatigue check). It
+never calls a model and never writes words: every token comes from the human-written alternatives
 (`src/lib/lexgen.ts`, tests in `scripts/lexgen.test.ts`, `npm test`).
 
-The **instructions hub** (`#/guide`) has role-based entry points for language leads
-(`#/guide/lead`) and native speakers (`#/guide/native`), a full worked demonstration
-(`#/guide/demo`), heuristics and troubleshooting (`#/guide/help`) and the handover checklist
-(`#/guide/handover`). Source: `src/site/`.
+Terms (Suchir, 23–24 Nov 2026): a **template** is the unit that counts (one sheet row, formerly
+"seed sentence"); a **slot pattern** is the lead's structure; **generated sentences** do not count.
+
+The **guide** (`#/guide`) is the one place for instructions: overview with languages, terms,
+targets, timeline and sessions (`#/guide`), how to write a template with the worked example
+(`#/guide/write`), language leads (`#/guide/lead`), native-speaker contributors (`#/guide/native`),
+FAQ (`#/guide/faq`), a full worked demonstration (`#/guide/demo`), heuristics and troubleshooting
+(`#/guide/help`) and the handover checklist (`#/guide/handover`). Source: `src/site/`.
 
 The earlier **annotation platform** is unchanged and lives at `#/app` (sign-in); links that carry
 its own parameters (`?demo=`, `?go=`, `?lang=`, email sign-in links) still open it directly.
