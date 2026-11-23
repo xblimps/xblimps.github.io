@@ -1,4 +1,23 @@
-# xBLiMPs — annotation platform
+# xBLiMPs: lexical generator, instructions and annotation platform
+
+The site opens on the **lexical generator** (`#/`): a lead or native speaker enters a template
+(slot headers + per-slot alternatives, one ✓ and one ✗ slot) and the tool expands every
+combination into minimal pairs (deterministic Cartesian product, ✓/✗ paired by position), with a
+count, preview, warnings when combinations explode, and CSV/TSV download. It never calls a model
+and never writes words: every token comes from the human-written alternatives
+(`src/lib/lexgen.ts`, tests in `scripts/lexgen.test.ts`, `npm test`).
+
+The **instructions hub** (`#/guide`) has role-based entry points for language leads
+(`#/guide/lead`) and native speakers (`#/guide/native`), a full worked demonstration
+(`#/guide/demo`), heuristics and troubleshooting (`#/guide/help`) and the handover checklist
+(`#/guide/handover`). Source: `src/site/`.
+
+The earlier **annotation platform** is unchanged and lives at `#/app` (sign-in); links that carry
+its own parameters (`?demo=`, `?go=`, `?lang=`, email sign-in links) still open it directly.
+
+---
+
+## Annotation platform
 
 A collaborative annotation platform for building multilingual linguistic test suites:
 minimal-pair generation + document annotation, with INCEpTION as the *design reference*,

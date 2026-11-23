@@ -9,6 +9,7 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview --port 4173",
     "typecheck": "tsc --noEmit",
+    "test": "tsx scripts/lexgen.test.ts",
     "hf:sync": "tsx scripts/hf-sync.ts"
   },
   "dependencies": {

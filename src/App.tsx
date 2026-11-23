@@ -44,6 +44,8 @@ export default function App() {
       {/* spine / module switcher */}
       <div className="spine">
         <div className="spine-logo">x</div>
+        {/* back to the public site: the lexical generator + instructions hub (the principal tools) */}
+        <a className="spine-btn" title="Lexical generator & instructions" href="#/" style={{ textDecoration: 'none', display: 'grid', placeItems: 'center' }}>📘</a>
         {!onlyForge && <button className={`spine-btn ${nav.view === 'board' ? 'active' : ''}`} title="Completion board" onClick={() => go({ view: 'board' })}>🏁</button>}
         {!onlyForge && <button className={`spine-btn ${inXblimps ? 'active' : ''}`} title="xBLiMPs minimal pairs" onClick={() => go({ view: 'xblimps', workspaceId: null, section: 'Home' })}>🔤</button>}
         <button className={`spine-btn ${nav.view === 'forge' ? 'active' : ''}`} title="Minimal-pair forge" onClick={() => go({ view: 'forge' })}>🪄</button>
