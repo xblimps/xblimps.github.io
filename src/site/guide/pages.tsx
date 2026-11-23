@@ -330,7 +330,8 @@ export function Help() {
         <tbody>
           <tr><td>“Mark one slot as ✓” or “as ✗”</td><td>Set the role of the grammatical slot to ✓ and its ungrammatical partner to ✗ in the slot header (or put ✓ / ✗ in the header text before pasting).</td></tr>
           <tr><td>My pasted sheet arrived as one column</td><td>Select the cells in the sheet and copy them (they paste as tab-separated). Or paste CSV or a Markdown table.</td></tr>
-          <tr><td>An alternative contains a comma</td><td>Separate that cell's alternatives with <span className="mono">|</span> or <span className="mono">;</span> instead.</td></tr>
+          <tr><td>An alternative contains a comma</td><td>Double it (<span className="mono">Segons la meva mare,, Em van dir que</span>), or end a single alternative with it (<span className="mono">(partir,)</span>), or separate that cell's alternatives with <span className="mono">|</span> or <span className="mono">;</span> instead. A sheet note “commas are not a delimiter in the X cell” is also understood.</td></tr>
+          <tr><td>My sheet has many templates in one tab</td><td>Copy the whole tab into “Check a whole sheet tab” on the generator page: it finds every template, counts seed rows against the targets, gives three examples per template for sign-off and downloads all the pairs at once.</td></tr>
           <tr><td>I want a slot to be sometimes empty</td><td>Add <span className="mono">∅</span> as one of its alternatives.</td></tr>
           <tr><td>My language is written without spaces</td><td>Set “Join slots with” to “nothing”, and adjust capitalisation and the final punctuation.</td></tr>
           <tr><td>The CSV shows strange characters in Excel</td><td>The CSV is UTF-8 (with a byte-order mark). If it still looks wrong, download the TSV, or import the file as UTF-8.</td></tr>

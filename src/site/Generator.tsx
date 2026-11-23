@@ -9,11 +9,12 @@ import {
   DEFAULT_OPTIONS, WARN_PER_ROW, WARN_TOTAL, type LexOptions, type LexTemplate, type SlotRole, type GeneratedPair,
 } from '../lib/lexgen'
 import { downloadText, copyText } from '../lib/download'
+import SheetImport from './SheetImport'
 
 const PREVIEW_N = 200
 const STORE_KEY = 'xblimps.lexgen.v1'
 
-const ROLE_LABEL: Record<SlotRole, string> = { shared: 'shared slot', good: '✓ correct', bad: '✗ incorrect' }
+const ROLE_LABEL: Record<SlotRole, string> = { shared: 'shared slot', good: '✓ correct', bad: '✗ incorrect', off: 'leave out' }
 
 function load(): { t: LexTemplate; o: LexOptions } | null {
   try {
@@ -135,8 +136,14 @@ export default function Generator() {
         </div>
       </div>
 
+      {/* ---- 0. whole sheet tab ---- */}
+      <SheetImport o={o} onOpen={(nt) => {
+        setT(nt); setToast(`Opened ${nt.name}`)
+        document.getElementById('template-panel')?.scrollIntoView({ behavior: 'smooth' })
+      }} />
+
       {/* ---- 1. template ---- */}
-      <div className="panel">
+      <div className="panel" id="template-panel">
         <div className="panel-head">
           <span className="step-n">1</span><h2>Template</h2>
           <input className="field" style={{ maxWidth: 240, padding: '5px 9px', fontSize: 13 }} value={t.name}
@@ -153,7 +160,9 @@ export default function Generator() {
               <div className="muted" style={{ fontSize: 13, marginBottom: 6 }}>
                 Copy the header row and one or more rows from your sheet (Google Sheets / Excel cells paste as tab-separated), or paste
                 CSV or a Markdown table. Mark the grammatical header with <b>✓</b> and the ungrammatical one with <b>✗</b> (or start it with <b>*</b>).
-                Separate alternatives with commas; use <b>|</b> or <b>;</b> if an alternative itself contains a comma; write <b>∅</b> for “leave empty”.
+                Separate alternatives with commas (Persian <b>،</b> works too). For a real comma inside an alternative, double it
+                (<b>Segons la meva mare,, Em van dir que</b>), end a single alternative with it (<b>(partir,)</b>), or separate the
+                alternatives with <b>|</b> or <b>;</b> instead. Write <b>∅</b> for “leave empty”.
               </div>
               <textarea className="paste" value={paste} onChange={(e) => setPaste(e.target.value)}
                 placeholder={'{subj_sg}\t{rel}\t{V_trans}\t{obj_pl}\t{VP_sg} ✓\t*{VP_pl} ✗\n(the refrigerator, the freezer)\tthat\t(stores, holds)\t(all the cakes)\t(runs too cold)\t(run too cold)'} />
@@ -174,7 +183,7 @@ export default function Generator() {
                         <input value={c.label} aria-label={`Slot ${ci + 1} header`} onChange={(e) => setCol(ci, { label: e.target.value })} />
                         <div className="row2">
                           <select value={c.role} aria-label={`Slot ${ci + 1} role`} onChange={(e) => setCol(ci, { role: e.target.value as SlotRole })}>
-                            {(['shared', 'good', 'bad'] as SlotRole[]).map((r) => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}
+                            {(['shared', 'good', 'bad', 'off'] as SlotRole[]).map((r) => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}
                           </select>
                           <button className="x" title="Move left" onClick={() => moveCol(ci, -1)}>‹</button>
                           <button className="x" title="Move right" onClick={() => moveCol(ci, 1)}>›</button>
