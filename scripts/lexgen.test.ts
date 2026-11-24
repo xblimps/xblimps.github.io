@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import {
   analyse, demoTemplate, expandAll, pairsToDelimited, parseCSV, splitAlternatives,
   templateFromText, templateToTSV, DEFAULT_OPTIONS, HARD_CAP,
-  sheetToTemplates, samplePairs, parseTSV, manyToDelimited, dedupePairs, repeatedWords,
+  sheetToTemplates, samplePairs, parseTSV, manyToDelimited, dedupePairs, repeatedWords, findContradictions,
 } from '../src/lib/lexgen'
 
 let n = 0
@@ -230,5 +230,143 @@ test('repeatedWords counts words across templates, skipping fixed slots', () => 
   assert.ok(!r.some((x) => x.word === 'qui'), 'fixed slot skipped')
   assert.ok(r.some((x) => x.word === 'fatigué' && x.templates === 3))
 })
+
+// ---------- regressions from the Generator QA report (24 Nov, Phase2/Generator-QA.md §4) ----------
+
+test('G1: mood selection takes the embedded verb next to ✗ as ✓, not the same-named matrix verb', () => {
+  const t = templateFromText("{subj}\t{V_indicatif}\t{conj}\t{subj_2sg}\t{V_subjonctif}\t{V_indicatif_mismatch}\t{context}\nIl\t(faut, est important)\tque\ttu\tsois\tes\t(content, triste, sympa)")
+  assert.deepEqual(t.columns.map((c) => c.role), ['shared', 'shared', 'shared', 'shared', 'good', 'bad', 'shared'])
+  const [p] = expandAll(t)
+  assert.equal(p.good, 'Il faut que tu sois content.')
+  assert.equal(p.bad, 'Il faut que tu es content.')
+  assert.equal(expandAll(t).length, 6)
+  // roles from names only: the page says so
+  assert.ok(analyse(t).issues.some((i) => i.level === 'warning' && /read from the slot names/.test(i.message)))
+  // 2.2: {V_indicatif} twice; the nearest one to the left of ✗ is the contrast slot
+  const t2 = templateFromText("{subj_sg}\t{V_indicatif}\t{conj}\t{subj_3sg}\t{V_indicatif}\t{V_indicatif_mismatch}\t{context}\nJe\t(pense, crois)\tqu'\til\tvient\tvienne\t(aujourd'hui, ce soir, demain)")
+  assert.deepEqual(t2.columns.map((c) => c.role), ['shared', 'shared', 'shared', 'shared', 'good', 'bad', 'shared'])
+  assert.deepEqual([expandAll(t2)[0].good, expandAll(t2)[0].bad], ["Je pense qu'il vient aujourd'hui.", "Je pense qu'il vienne aujourd'hui."])
+  // explicit marks still win over every name rule
+  const t3 = templateFromText("{subj}\t{V_indicatif} ✓\t{conj}\t{V_subjonctif}\t{V_indicatif_mismatch} ✗\nIl\tfaut\tque\tsois\tes")
+  assert.deepEqual(t3.columns.map((c) => c.role), ['shared', 'good', 'shared', 'shared', 'bad'])
+  // word order is unchanged: a different category next to ✗, so the same-stem slot elsewhere is ✓
+  const wo = templateFromText('{subj_3esg}\t{cod_mistmatch}\t{coi}\t{cod}\t{V_3esg}\n(Elle)\t(le)\t(lui)\t(le)\t(donne)')
+  assert.deepEqual(wo.columns.map((c) => c.role), ['shared', 'bad', 'shared', 'good', 'shared'])
+})
+
+test('G2: _nonagr before _agr is ambiguous: no roles guessed, a clear message, no pairs', () => {
+  const c = templateFromText('{SUBJ}\t{AUX}\t{PTCP_nonagr}\t{PTCP_agr}\n(les veïnes, les meves germanes, la Maria i la Júlia)\than\t(marxat, sortit, arribat)\t(marxades, sortides, arribades)')
+  assert.ok(!c.columns.some((x) => x.role === 'good' || x.role === 'bad'))
+  const a = analyse(c)
+  assert.equal(a.ok, false)
+  assert.match(a.issues[0].message, /do not say which one is grammatical.*Mark the grammatical header with ✓/s)
+  assert.deepEqual(expandAll(c), [])
+  // explicit marks give the intended pairs
+  const m = templateFromText('{SUBJ}\t{AUX}\t{PTCP_nonagr} ✓\t{PTCP_agr} ✗\n(les veïnes)\than\t(marxat, sortit, arribat)\t(marxades, sortides, arribades)')
+  assert.deepEqual([expandAll(m)[0].good, expandAll(m)[0].bad], ['Les veïnes han marxat.', 'Les veïnes han marxades.'])
+  // the usual order {VP_agr} {VP_nonagr} still works, with the "check the roles" warning
+  const ca = templateFromText('{SUBJ}\t{VP_agr}\t{VP_nonagr}\n(els nens)\t(mengen)\t(menja)')
+  assert.deepEqual(ca.columns.map((x) => x.role), ['shared', 'good', 'bad'])
+  assert.ok(analyse(ca).issues.some((i) => i.level === 'warning' && /read from the slot names/.test(i.message)))
+  // ✗ marked explicitly with *: no name warning
+  const fr = templateFromText('{subj}\t{pp_fem_sg}\t*{pp_fem_sg_mismatch}\n(la fille)\t(mangée)\t(mangé)')
+  assert.ok(!analyse(fr).issues.some((i) => i.level === 'warning'))
+})
+
+test('G3: a header row without "Templates:" in a tab that uses the marker is a header, not a template row', () => {
+  const tab = 'M\tS\tTemplates:\t{a}\t{b_ok}\t*{b_mismatch}\n\t\t1\t(x, y, z)\t(p, q, r)\t(P, Q, R)\n\t\t\t{c}\t{d_ok}\t*{d_mismatch}\n\t\t2\t(u, v, w)\t(k, l, m)\t(K, L, M)'
+  const ts = sheetToTemplates(tab)
+  assert.equal(ts.length, 2)
+  assert.deepEqual(ts.map((s) => s.template.rows.length), [1, 1])
+  assert.equal(ts[1].template.columns[0].label, '{c}')
+  assert.deepEqual(ts.map((s) => s.dataRows), [[2], [4]])
+  for (const s of ts) for (const p of expandAll(s.template)) assert.ok(!/[{}]/.test(p.good + p.bad))
+})
+
+test('G4: the French comma note wording and [square brackets] keep the comma', () => {
+  const fr = "Macro\tSub\tTemplates:\t{loc}\t{subj}\t{V_subjonctif}\t{V_subjonctif_mismatch}\t{context}\n\tNote: the comma in the {context} cell is not a delimiter, but indeed part of the sentence.\t1\tBien qu'\telle\tsoit\test\t[fatiguée, elle se réveille très tôt]"
+  const [s] = sheetToTemplates(fr)
+  assert.deepEqual(expandAll(s.template).map((p) => p.good), ["Bien qu'elle soit fatiguée, elle se réveille très tôt."])
+  // the note alone (round brackets) makes the column literal
+  const [s2] = sheetToTemplates(fr.replace('[fatiguée, elle se réveille très tôt]', '(fatiguée, elle se réveille très tôt)'))
+  assert.equal(s2.template.columns[4].literal, true)
+  assert.deepEqual(splitAlternatives('[fatiguée, elle se réveille très tôt]'), ['fatiguée, elle se réveille très tôt'])
+  assert.deepEqual(splitAlternatives('[partir,]'), ['partir,'])
+  assert.deepEqual(splitAlternatives('[a, b; c, d]'), ['a, b', 'c, d'])
+})
+
+test('G5: a header after the last {slot} is kept: used when its cells are lists, otherwise off and reported', () => {
+  const ez = '{subj_EZ_match}\t{subj_EZ_mismatch}\t{subj_modifier}\tvery\t{modifier}\tbe\n(خانه‌ی، مدرسه‌ی، صدای)\t(خانه‌، مدرسه‌، صدا)\t(تو، او، من)\t(خیلی، بسیار)\t(قشنگ، خوب، عجیب)\t(است، بود)'
+  const [s] = sheetToTemplates(ez)
+  assert.equal(s.template.columns.length, 6)
+  assert.equal(s.template.columns[5].role, 'shared')
+  const [p] = expandAll(s.template)
+  assert.ok(p.good.endsWith('است.'), p.good)
+  assert.ok(analyse(s.template).issues.some((i) => /“be” has no \{braces\}/.test(i.message)))
+  // an author column is left out of the sentences, but shown and reported
+  const [e] = sheetToTemplates('{subj}\t{V} ✓\t*{V_bad} ✗\tauthor\n(the cat, the dog, the bird)\tsleeps\tsleep\tAB')
+  assert.equal(e.template.columns[3].role, 'off')
+  assert.equal(expandAll(e.template)[0].good, 'The cat sleeps.')
+  assert.ok(analyse(e.template).issues.some((i) => i.level === 'warning' && /“author” is to the right of the last \{slot\}/.test(i.message)))
+})
+
+test('G6: subphenomenon title rows inside the slot range are labels, not template rows', () => {
+  const tab = 'Subject verb\t\t\n{SUBJ}\t{VERB_agr}\t{VERB_nonagr}\n(els nens, les veïnes, aquells músics)\t(mengen, canten, treballen)\t(menja, canta, treballa)\n\t\t\nPredicative adjective\t\t\n{SUBJ}\t{ADJ_agr}\t{ADJ_nonagr}\n(la noia, la germana, la dona)\t(contenta, cansada, nerviosa)\t(content, cansat, nerviós)'
+  const ts = sheetToTemplates(tab)
+  assert.equal(ts.length, 2)
+  assert.deepEqual(ts.map((s) => s.template.rows.length), [1, 1])
+  assert.deepEqual(ts.map((s) => s.template.sub), ['Subject verb', 'Predicative adjective'])
+  assert.ok(ts.every((s) => analyse(s.template).ok))
+  // a title beside a stray {slot} cell is a label too
+  const t2 = sheetToTemplates('{SUBJ}\t{V_agr}\t{V_nonagr}\t{Suffix}\n(a, b, c)\t(d, e, f)\t(g, h, i)\t(j, k, l)\nPassives\t\t\t{Suffix}\n{SUBJ}\t{X_agr}\t{X_nonagr}\n(a, b, c)\t(m, n, o)\t(p, q, r)')
+  assert.deepEqual(t2.map((s) => s.template.rows.length), [1, 1])
+  assert.equal(t2[1].template.sub, 'Passives')
+})
+
+test('G7: no "identical partner" warning for word-order templates; still warned for in-place contrasts', () => {
+  const wo = templateFromText('{det}\t{ord_num}\t{noun}\t*{ord_num_mismatch}\n(le, ce, un)\t(premier, dernier, deuxième)\t(jour)\t(premier, dernier, deuxième)')
+  assert.ok(!analyse(wo).issues.some((i) => /identical/.test(i.message)))
+  assert.equal(expandAll(wo)[0].bad, 'Le jour premier.')
+  const inPlace = templateFromText('{subj}\t{pp} ✓\t*{pp_x} ✗\n(il)\t(mangé, dévorée)\t(mangée, dévorée)')
+  assert.ok(analyse(inPlace).issues.some((i) => /identical/.test(i.message)))
+})
+
+test('G8: the template count leaves out rows that fail the 3+ rule or have no usable contrast', () => {
+  const t = templateFromText([
+    '{subj}\t{V} ✓\t*{V_bad} ✗\t{obj}',
+    '(the cat, the dog, the bird)\t(sees, likes, finds)\t(see, like, find)\t(it, them, him)',  // counts
+    '(the cat, the dog)\t(sees, likes, finds)\t(see, like, find)\t(it, them, him)',          // 2 alternatives
+    '(the cat, the dog, the bird)\t(sees, likes, finds)\t(see, like)\t(it, them, him)',      // ✓/✗ do not pair up
+    '(the cat, the dog, the bird)\tsees\tsee\t(it, them, him)',                               // single contrast pair: fine
+  ].join('\n'))
+  const a = analyse(t)
+  assert.equal(a.plans.length, 4)
+  assert.deepEqual(a.plans.map((p) => p.meetsRule), [true, false, false, true])
+  assert.equal(a.templates, 2)
+})
+
+test('G9: identical ✓ = ✗ pairs are dropped from the output; contradictions are reported', () => {
+  const t = templateFromText('{subj}\t{pp} ✓\t*{pp_x} ✗\n(il, elle, on)\t(mangé, dévorée)\t(mangée, dévorée)')
+  const all = expandAll(t)
+  assert.equal(all.length, 6)
+  const d = dedupePairs(all)
+  assert.equal(d.identical, 3)
+  assert.equal(d.repeated, 0)
+  assert.equal(d.removed, 3)
+  assert.ok(d.pairs.every((p) => p.good !== p.bad))
+  const c = findContradictions([{ good: 'A b.', bad: 'A c.' }, { good: 'A c.', bad: 'A b.' }, { good: 'X y.', bad: 'X z.' }])
+  assert.deepEqual(c.map((x) => x.sentence), ['A c.', 'A b.'])
+  assert.equal(dedupePairs([{ good: 'A b.', bad: 'A c.' }, { good: 'A c.', bad: 'A d.' }]).contradictions.length, 1)
+})
+
+test('G10: zero-width non-joiners at word / sentence edges are trimmed, never inside words', () => {
+  const zw = '‌'
+  const t = templateFromText(`{n} ✓\t*{n_x} ✗\t{m}\n(خانه${zw}ی)\t(خانه${zw})\t(تو${zw})`)
+  const [p] = expandAll(t)
+  assert.equal(p.good, `خانه${zw}ی تو.`)      // inside the word: kept
+  assert.equal(p.bad, 'خانه تو.')               // at the end of a word and of the sentence: trimmed
+  assert.ok(!/‌(\s|\.|$)/.test(p.good + ' ' + p.bad))
+})
+
 console.log(`
 ${n} tests passed`)

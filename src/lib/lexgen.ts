@@ -20,6 +20,8 @@ export interface LexColumn {
   role: SlotRole          // 'off' = keep the column in the sheet but leave it out of the sentences
   literal?: boolean       // commas in this column are text, not separators (split only on | or ;)
   optional?: boolean      // header said "(optional)": the slot may also be left empty
+  inferred?: boolean      // ✓/✗ role read from the slot name or position, not from a ✓ / ✗ / * mark in the header
+  trailing?: boolean      // header cell to the right of the last {slot} (read from a whole tab)
 }
 
 export interface LexTemplate {
@@ -28,6 +30,7 @@ export interface LexTemplate {
   sub?: string
   columns: LexColumn[]
   rows: string[][] // rows[r][c] = the raw cell text (alternatives, separated by commas)
+  roleHint?: string       // why ✓ / ✗ were left unset when reading the headers (ambiguous slot names)
 }
 
 export interface LexOptions {
@@ -65,9 +68,19 @@ export const EMPTY_MARKERS = ['∅', '(none)', '—', '-']
 
 // ---------- parsing ----------
 
-/** Slot names that the language sheets use for the ungrammatical side of the contrast. */
-const BAD_NAME = /(mismatch|non[-_ ]?agr|nonmatch|ungram|[_-]bad\b|\bbad\b|[_-]wrong\b)/i
+/** Slot names that the language sheets use for the ungrammatical side of the contrast ("mistmatch": a typo in the French sheet). */
+const BAD_NAME = /(mist?match|non[-_ ]?agr|nonmatch|ungram|[_-]bad\b|\bbad\b|[_-]wrong\b)/i
+/** Names that describe morphology rather than grammaticality: in some phenomena the non-agreeing form is the grammatical one. */
+const WEAK_BAD_NAME = /non[-_ ]?agr/i
 const OPTIONAL = /\(?\s*optional\s*\)?/i
+
+/** Role given by an explicit mark in the header (✓, ✗ or a leading *), or null when there is none. */
+export function markedRole(h: string): SlotRole | null {
+  const t = h.trim()
+  if (/[✗✘×]/.test(t) || t.startsWith('*')) return 'bad'
+  if (/[✓✔]/.test(t)) return 'good'
+  return null
+}
 
 /**
  * Role from a header. Explicit markers win: ✓ = grammatical slot, ✗ or a leading * = ungrammatical.
@@ -75,10 +88,9 @@ const OPTIONAL = /\(?\s*optional\s*\)?/i
  * {pp_fem_sg_mismatch}, {VP_nonagr}, {DET_numbermismatch}, "UNGRAMMATICAL" under a header, …
  */
 export function roleFromHeader(h: string): SlotRole {
-  const t = h.trim()
-  if (/[✗✘×]/.test(t) || t.startsWith('*')) return 'bad'
-  if (/[✓✔]/.test(t)) return 'good'
-  if (BAD_NAME.test(t)) return 'bad'
+  const marked = markedRole(h)
+  if (marked) return marked
+  if (BAD_NAME.test(h.trim())) return 'bad'
   return 'shared'
 }
 
@@ -109,12 +121,16 @@ const COMMA = /[,،，、]/
  * Real commas inside an alternative, as the language sheets write them:
  *   "(Segons la meva mare,, Em van dir que)" → ["Segons la meva mare,", "Em van dir que"]  (doubled comma)
  *   "(partir,)"                               → ["partir,"]                                (trailing comma)
+ *   "[fatiguée, elle se réveille très tôt]"   → ["fatiguée, elle se réveille très tôt"]   (square brackets)
  *   literal = true (column note "commas are not a delimiter in this cell") → split only on | or ;
  * A leading "*" on ✗ alternatives is dropped. "∅" means an empty filler.
  */
 export function splitAlternatives(cell: string, role: SlotRole = 'shared', literal = false): string[] {
   let t = (cell ?? '').trim()
   if (role === 'bad') t = t.replace(/^\*\s*/, '')
+  // a cell wrapped in square brackets is one alternative whose commas are text (the French sheet's
+  // "[fatiguée, elle se réveille très tôt]"); | or ; still separate alternatives inside it
+  if (/^\[[^\]]*\]$/s.test(t)) literal = true
   // strip one pair of enclosing brackets (any mix: the sheets have "{a, b)")
   const m = t.match(/^[([{](.*)[)\]}]$/s)
   if (m) t = m[1].trim()
@@ -232,35 +248,73 @@ export function templateFromText(text: string, name = 'template'): LexTemplate {
   if (table.length === 0) return { name, columns: [], rows: [] }
   const [head, ...body] = table
   const width = Math.max(head.length, ...body.map((r) => r.length))
-  const columns = columnsFromHeaders(Array.from({ length: width }, (_, c) => head[c] ?? ''))
+  const { columns, roleHint } = readHeaders(Array.from({ length: width }, (_, c) => head[c] ?? ''))
   const rows = body.map((r) => Array.from({ length: width }, (_, c) => r[c] ?? ''))
-  return { name, columns, rows }
+  return roleHint ? { name, columns, rows, roleHint } : { name, columns, rows }
 }
 
+/** Slot name without braces, the ✗ suffix ("_mismatch", "_nonagr", …) or "_agr": {VP_nonagr} → "vp". */
+const slotStem = (l: string) => l.replace(/[{}*\s]/g, '').replace(/[_-]?(mist?match|non[-_]?agr|nonmatch|ungram\w*|bad|wrong)$/i, '').replace(/[_-]?agr$/i, '').toLowerCase()
+/** First part of a slot name, the category: {V_subjonctif} and {V_indicatif_mismatch} → "v". */
+const slotCategory = (l: string) => l.replace(/[{}*\s]/g, '').split(/[_\-/+]/)[0].toLowerCase()
+
 /**
- * Columns from raw header cells. If the sheet marks only the ✗ slot (e.g. "*{pp_fem_sg_mismatch}" or
- * "{VP_nonagr}"), the nearest slot to its left is taken as the ✓ slot, which is how every language
- * sheet lays out the contrast. Anything else is left for the lead to set in the role menu.
+ * Columns from raw header cells, plus a hint when the ✓ / ✗ slots could not be told apart.
+ *
+ * Explicit marks always win (✓; ✗ or a leading *). When the sheet marks only the ✗ slot, or the ✗ slot
+ * is known only from its name ({pp_fem_sg_mismatch}, {VP_nonagr}), the ✓ slot is found in this order:
+ *   1. the nearest slot to the left of ✗ with the same name stem ({VP_agr} {VP_nonagr});
+ *   2. the slot just left of ✗ when it has the same category ({V_subjonctif} {V_indicatif_mismatch}: an
+ *      in-place mood contrast, even if a matrix {V_indicatif} sits further left);
+ *   3. the only other slot with the same stem, wherever it is (word order: {ord_num} {noun} {ord_num_mismatch});
+ *   4. the nearest slot to the left of ✗.
+ * When the ✗ slot is known only from its name and the ✓ slot found this way sits to its right (directly
+ * next to it, or for _agr / _nonagr names anywhere), the names alone cannot say which side is
+ * grammatical (Catalan {PTCP_nonagr} {PTCP_agr}, where the non-agreeing participle is the correct
+ * form), so neither role is set and roleHint asks for explicit marks. Roles that come from names or
+ * position are flagged `inferred`, and analyse() reports them.
  */
-export function columnsFromHeaders(heads: string[]): LexColumn[] {
+export function readHeaders(heads: string[]): { columns: LexColumn[]; roleHint?: string } {
   const columns: LexColumn[] = heads.map((h, c) => {
     const col: LexColumn = { label: cleanLabel(h) || `slot ${c + 1}`, role: roleFromHeader(h) }
+    if (col.role === 'bad' && !markedRole(h)) col.inferred = true
     if (isOptionalHeader(h)) col.optional = true
     return col
   })
   const good = columns.filter((c) => c.role === 'good').length
   const bad = columns.map((c, i) => (c.role === 'bad' ? i : -1)).filter((i) => i >= 0)
-  if (good === 0 && bad.length === 1) {
-    // the ✓ slot named like the ✗ slot without "_mismatch" / "_nonagr" (it may sit elsewhere: word order)
-    const stem = (l: string) => l.replace(/[{}*\s]/g, '').replace(/[_-]?(mismatch|non[-_]?agr|nonmatch|ungram\w*|bad|wrong)$/i, '').replace(/[_-]?agr$/i, '').toLowerCase()
-    const want = stem(columns[bad[0]].label)
-    const twin = columns.findIndex((c, i) => i !== bad[0] && c.role === 'shared' && stem(c.label) === want)
-    if (twin >= 0) { columns[twin].role = 'good'; return columns }
-    for (let i = bad[0] - 1; i >= 0; i--) {
-      if (columns[i].role === 'shared' && /\{/.test(columns[i].label)) { columns[i].role = 'good'; break }
-    }
+  if (good !== 0 || bad.length !== 1) return { columns }
+  const b = bad[0]
+  const isSlot = (i: number) => columns[i].role === 'shared' && /\{/.test(columns[i].label)
+  const want = slotStem(columns[b].label)
+  const twins = columns.map((_, i) => i).filter((i) => i !== b && isSlot(i) && slotStem(columns[i].label) === want)
+  let left = -1
+  for (let i = b - 1; i >= 0; i--) if (isSlot(i)) { left = i; break }
+  const leftTwin = twins.filter((i) => i < b).pop()
+  let pick = -1
+  if (left >= 0 && twins.includes(left)) pick = left
+  else if (left === b - 1 && left >= 0 && slotCategory(columns[left].label) === slotCategory(columns[b].label)) pick = left
+  else if (twins.length === 1) pick = twins[0]
+  else if (leftTwin !== undefined) pick = leftTwin
+  else if (twins.length > 1) {
+    columns[b].role = 'shared'; delete columns[b].inferred
+    return { columns, roleHint: `Several slots are named like ${columns[b].label} (${twins.map((i) => columns[i].label).join(', ')}), so the ✓ slot is unclear. Mark the grammatical header with ✓ and the ungrammatical one with ✗.` }
+  } else pick = left
+  if (pick < 0) return { columns }
+  const nameOnly = !!columns[b].inferred
+  if (nameOnly && pick > b && (pick === b + 1 || WEAK_BAD_NAME.test(columns[b].label))) {
+    const g = columns[pick].label, x = columns[b].label
+    columns[b].role = 'shared'; delete columns[b].inferred
+    return { columns, roleHint: `The slot names ${x} and ${g} do not say which one is grammatical (a non-agreeing or "mismatch" form can be the correct one, and here it comes first). Mark the grammatical header with ✓ and the ungrammatical one with ✗.` }
   }
-  return columns
+  columns[pick].role = 'good'
+  columns[pick].inferred = true
+  return { columns }
+}
+
+/** Columns from raw header cells (see readHeaders for how the ✓ / ✗ slots are found). */
+export function columnsFromHeaders(heads: string[]): LexColumn[] {
+  return readHeaders(heads).columns
 }
 
 /** The template as tab-separated text (headers re-marked with ✓ / ✗), for copying back to a sheet. */
@@ -277,7 +331,19 @@ export function templateToTSV(t: LexTemplate): string {
 /** A header cell such as "{cod_sg_fem}", "*{pp_mismatch}", "{SUBJ} (optional)", "{coi_1esg/pl)". */
 const SLOT_HEAD = /^\*?\s*\{[^\s{}(),'’]+[})]/
 const TEMPLATES_MARK = /^templates?\s*:?$/i
-const COMMA_NOTE = /commas?\s+(?:are|is)\s+not\s+(?:a\s+)?(?:delimiters?|separators?)\s+in\s+(?:the\s+)?\{?([^}\s]+)\}?/i
+/** A sheet note saying commas are text, not separators, in some slot ("the comma in the {context} cell is not a delimiter …"). */
+const COMMA_NOTE = /\bcommas?\b[\s\S]*?\bnot\s+(?:a\s+|the\s+)?(?:delimiter|separator)s?\b/i
+
+/** The slot(s) a comma note is about: every {slot} it names, or "in the X cell" without braces. */
+export function literalSlotsFromNote(note: string): string[] {
+  if (!COMMA_NOTE.test(note)) return []
+  const braced = [...note.matchAll(/\{([^}\s]+)\}/g)].map((m) => m[1].toLowerCase())
+  if (braced.length) return braced
+  const m = note.match(/\bin\s+(?:the\s+)?([^\s{}]+)\s+(?:cell|column|slot)s?\b/i)
+  return m ? [m[1].toLowerCase()] : []
+}
+/** A cell that is a list of alternatives: "(a, b, c)", "[a, b]", "{a, b)". */
+const LIST_CELL = /^[([{][\s\S]*[)\]}]$/
 
 export interface SheetTemplate {
   template: LexTemplate
@@ -290,10 +356,9 @@ function isHeaderRow(cells: string[], useMarker: boolean): { start: number; end:
   if (slotIdx.length === 0) return null
   const start = slotIdx[0]
   const end = slotIdx[slotIdx.length - 1]
-  if (useMarker) {
-    return cells.slice(0, start).some((c) => TEMPLATES_MARK.test(c.trim())) ? { start, end } : null
-  }
-  // no "Templates:" markers in the tab: most cells from the first slot or bracketed cell onward are slot names
+  if (useMarker && cells.slice(0, start).some((c) => TEMPLATES_MARK.test(c.trim()))) return { start, end }
+  // no "Templates:" marker on this row (or none in the tab): most cells from the first slot or
+  // bracketed cell onward are slot names. A tab that uses the markers can still forget one (G3).
   const first = cells.findIndex((c) => SLOT_HEAD.test(c.trim()) || /^[([{]/.test(c.trim()))
   const rest = cells.slice(first).filter((c) => c.trim() !== '')
   const heads = rest.filter((c) => SLOT_HEAD.test(c.trim())).length
@@ -313,7 +378,7 @@ export function sheetToTemplates(text: string): SheetTemplate[] {
   let macro = ''
   let sub = ''
   type Label = { col: number; text: string; start: number }
-  let cur: { start: number; end: number; heads: string[]; rows: string[][]; dataRows: number[]; headerRow: number; notes: string[]; labels: Label[] } | null = null
+  let cur: { start: number; end: number; slotEnd: number; heads: string[]; rows: string[][]; dataRows: number[]; headerRow: number; notes: string[]; labels: Label[] } | null = null
 
   // label cells left of the slots: macro in the first column and sub in the second (when the tab
   // keeps both), skipping "Templates:", row numbers like "1.0" and notes
@@ -327,39 +392,67 @@ export function sheetToTemplates(text: string): SheetTemplate[] {
         const isMacro = l.start >= 2 ? l.col === 0 : /^\d+\.\s*\S/.test(l.text) && !macro
         if (isMacro) { macro = l.text; sub = '' } else sub = l.text
       }
-      const columns = columnsFromHeaders(cur.heads)
-      for (const note of cur.notes) {
-        const m = note.match(COMMA_NOTE)
-        if (!m) continue
-        const want = m[1].replace(/[{}]/g, '').toLowerCase()
-        columns.forEach((c) => { if (c.label.replace(/[{}]/g, '').toLowerCase() === want) c.literal = true })
+      const c = cur
+      const nSlots = c.slotEnd - c.start + 1
+      const { columns, roleHint } = readHeaders(c.heads.slice(0, nSlots))
+      // trailing header cells: a slot when its cells are lists of alternatives ("(است، بود)"), otherwise
+      // left out ("author"). Either way analyse() says so, and the role can be changed.
+      c.heads.slice(nSlots).forEach((h, k) => {
+        const ci = nSlots + k
+        const isList = c.rows.some((row) => LIST_CELL.test((row[ci] ?? '').trim()))
+        columns.push({ label: cleanLabel(h) || `slot ${ci + 1}`, role: isList ? 'shared' : 'off', trailing: true })
+      })
+      for (const note of c.notes) {
+        for (const want of literalSlotsFromNote(note)) {
+          columns.forEach((col) => { if (col.label.replace(/[{}]/g, '').toLowerCase() === want.replace(/[{}]/g, '')) col.literal = true })
+        }
       }
       const n = out.filter((o) => o.template.macro === macro && o.template.sub === sub).length + 1
-      const name = ([macro, sub].filter(Boolean).join(' · ') || `row ${cur.headerRow}`) + ` · T${n}`
-      out.push({ template: { name, macro, sub, columns, rows: cur.rows }, headerRow: cur.headerRow, dataRows: cur.dataRows })
+      const name = ([macro, sub].filter(Boolean).join(' · ') || `row ${c.headerRow}`) + ` · T${n}`
+      const template: LexTemplate = { name, macro, sub, columns, rows: c.rows }
+      if (roleHint) template.roleHint = roleHint
+      out.push({ template, headerRow: c.headerRow, dataRows: c.dataRows })
     }
     cur = null
   }
+
+  // a lone title in a row ("Predicative adjective") names the subphenomenon of the next slot pattern
+  let pending = ''
+  const isTitle = (x: string) => !!x && x.length <= 120 && !/[(),،\[\]{}]/.test(x) && !/^note\b/i.test(x) && !/^\d+(\.\d+)?$/.test(x)
 
   table.forEach((cells, r) => {
     const h = isHeaderRow(cells, useMarker)
     if (h) {
       flush()
-      cur = { ...h, heads: cells.slice(h.start, h.end + 1), rows: [], dataRows: [], headerRow: r + 1, notes: [], labels: label(cells.slice(0, h.start), h.start) }
+      // header cells to the right of the last {slot} ("be", "author") are kept as columns, never dropped silently (G5)
+      let end = h.end
+      for (let i = cells.length - 1; i > h.end; i--) if (cells[i].trim()) { end = i; break }
+      const labels = label(cells.slice(0, h.start), h.start)
+      if (!labels.length && pending) labels.push({ col: 1, text: pending, start: 2 })
+      pending = ''
+      cur = { start: h.start, end, slotEnd: h.end, heads: cells.slice(h.start, end + 1), rows: [], dataRows: [], headerRow: r + 1, notes: [], labels }
+      cells.forEach((x, i) => { if ((i < h.start || i > end) && COMMA_NOTE.test(x)) cur!.notes.push(x) })
       return
     }
+    const filled = cells.map((x) => x.trim()).filter(Boolean)
     if (!cur) {
       // labels above the first header (e.g. "10. Differential Object Marking") just set the context
+      if (!useMarker && filled.length === 1 && cells[0].trim() && isTitle(filled[0])) pending = filled[0]
       return
     }
     const c = cur as NonNullable<typeof cur>
+    cells.forEach((x, i) => { if ((i < c.start || i > c.end) && COMMA_NOTE.test(x)) c.notes.push(x) })
     const left = cells.slice(0, c.start)
-    left.forEach((x) => { if (COMMA_NOTE.test(x)) c.notes.push(x) })
     const data = Array.from({ length: c.end - c.start + 1 }, (_, i) => cells[c.start + i] ?? '')
     if (data.every((x) => x.trim() === '')) {
       // an all-blank row inside the slot range: the template may continue below (blank spacer rows)
       return
     }
+    // a row whose only text is a short title inside the slot range (perhaps beside a stray {slot}
+    // header cell) is a subphenomenon label, not a template (G6)
+    const inData = data.map((x) => x.trim()).filter(Boolean)
+    const plain = filled.filter((x) => !SLOT_HEAD.test(x))
+    if (plain.length === 1 && inData.includes(plain[0]) && isTitle(plain[0])) { pending = plain[0]; return }
     if (!c.labels.length) {
       const ls = label(left, c.start)
       if (ls.length) c.labels = ls
@@ -378,7 +471,11 @@ interface RowPlan {
   alts: string[][]        // per column, the alternatives (the ✗ column holds the ✗ partners)
   pairs: [string, string][] // ✓/✗ alternatives matched by position
   count: number
+  meetsRule: boolean      // counts as a template: 3+ alternatives in every varying slot (✓ / ✗ included) and a usable contrast
 }
+
+/** Alternatives in a varying slot, as the project defines a template (3–4; more is allowed but noted elsewhere). */
+export const MIN_ALTERNATIVES = 3
 
 export interface Analysis {
   issues: Issue[]
@@ -390,6 +487,7 @@ export interface Analysis {
   explode: boolean       // above the warning threshold
   overCap: boolean
   plans: RowPlan[]
+  templates: number      // rows that count as templates (RowPlan.meetsRule)
 }
 
 export function analyse(t: LexTemplate): Analysis {
@@ -397,18 +495,39 @@ export function analyse(t: LexTemplate): Analysis {
   const goodCols = t.columns.map((c, i) => (c.role === 'good' ? i : -1)).filter((i) => i >= 0)
   const badCols = t.columns.map((c, i) => (c.role === 'bad' ? i : -1)).filter((i) => i >= 0)
   if (t.columns.length === 0) issues.push({ level: 'error', message: 'Add slot headers first (the top row of the template).' })
-  if (goodCols.length !== 1) issues.push({ level: 'error', message: goodCols.length === 0 ? 'Mark one slot as ✓ (the grammatical alternative).' : 'Only one slot may be ✓: one slot carries the grammatical / ungrammatical contrast.' })
-  if (badCols.length !== 1) issues.push({ level: 'error', message: badCols.length === 0 ? 'Mark one slot as ✗ (the ungrammatical alternative of the ✓ slot).' : 'Only one slot may be ✗: one slot carries the grammatical / ungrammatical contrast.' })
+  // ✓ / ✗ left unset on purpose because the slot names were ambiguous: say why instead of the generic message
+  const hint = t.roleHint && goodCols.length === 0 && badCols.length === 0 ? t.roleHint : ''
+  if (hint) issues.push({ level: 'error', message: hint })
+  if (goodCols.length !== 1 && !hint) issues.push({ level: 'error', message: goodCols.length === 0 ? 'Mark one slot as ✓ (the grammatical alternative).' : 'Only one slot may be ✓: one slot carries the grammatical / ungrammatical contrast.' })
+  if (badCols.length !== 1 && !hint) issues.push({ level: 'error', message: badCols.length === 0 ? 'Mark one slot as ✗ (the ungrammatical alternative of the ✓ slot).' : 'Only one slot may be ✗: one slot carries the grammatical / ungrammatical contrast.' })
   if (t.rows.length === 0 && t.columns.length > 0) issues.push({ level: 'error', message: 'Add at least one row of alternatives under the headers.' })
   const goodCol = goodCols[0] ?? -1
   const badCol = badCols[0] ?? -1
   const plans: RowPlan[] = []
   const structural = issues.some((i) => i.level === 'error')
+  // roles read from slot names or position rather than ✓ / ✗ marks: say so, so a lead can check them (G1, G2)
+  if (goodCols.length === 1 && badCols.length === 1) {
+    const g = t.columns[goodCol], b = t.columns[badCol]
+    if (b.inferred) {
+      issues.push({ level: 'warning', message: `✓ / ✗ were read from the slot names, not from marks: ✓ = ${g.label}, ✗ = ${b.label}. Check the first pairs are the right way round; to confirm, mark the headers ✓ and ✗ in the sheet.` })
+    } else if (g.inferred) {
+      issues.push({ level: 'note', message: `✓ = ${g.label}, taken as the partner of the ✗ slot ${b.label}. Mark it ✓ in the sheet to make this explicit.` })
+    }
+  }
+  // header cells to the right of the last {slot} (G5): never left out silently
+  t.columns.forEach((c, ci) => {
+    if (!c.trailing || !t.rows.some((r) => (r[ci] ?? '').trim())) return
+    if (c.role === 'off') issues.push({ level: 'warning', message: `“${c.label}” is to the right of the last {slot} and has no braces, so it is left out of the sentences. If it belongs in the sentence, write its header in {braces} (or set its role here).` })
+    else if (!/\{/.test(c.label)) issues.push({ level: 'note', message: `“${c.label}” has no {braces}, but its cells are lists of alternatives, so it is used as a slot. Write its header in {braces} to make this explicit.` })
+  })
+  // ✓ and ✗ side by side (in-place contrast) or apart (word order: the same word in another position is intended)
+  const adjacent = goodCol >= 0 && badCol >= 0 && !t.columns.some((c, ci) => c.role === 'shared' && ci > Math.min(goodCol, badCol) && ci < Math.max(goodCol, badCol))
 
   t.rows.forEach((cells, r) => {
     const row = r + 1
     const alts = t.columns.map((c, ci) => (c.role === 'off' ? [] : splitAlternatives(cells[ci] ?? '', c.role, !!c.literal)))
     if (alts.every((a) => a.length === 0)) return // blank row: ignore silently
+    const written = alts.map((a) => a.filter((v) => v !== '').length) // alternatives as typed, before optional / ∅ handling
     t.columns.forEach((c, ci) => {
       if (c.role === 'off') return
       const a = alts[ci]
@@ -438,13 +557,17 @@ export function analyse(t: LexTemplate): Analysis {
         else if (g.length === 1) pairs = b.map((v) => [g[0], v])
         else issues.push({ level: 'error', row, message: `✓ has ${g.length} alternatives and ✗ has ${b.length}. They are matched by position (1st ✓ with 1st ✗ …), so give them the same number.` })
         for (const [gv, bv] of pairs) {
-          if (gv === bv) issues.push({ level: 'warning', row, message: `✓ “${gv}” and its ✗ partner are identical: that is not a minimal pair.` })
+          if (gv === bv && adjacent) issues.push({ level: 'warning', row, message: `✓ “${gv}” and its ✗ partner are identical: that is not a minimal pair (identical pairs are left out of the downloads).` })
         }
       }
     }
     let count = pairs.length
     t.columns.forEach((c, ci) => { if (c.role === 'shared') count *= Math.max(1, alts[ci].length) })
-    plans.push({ row, alts, pairs, count })
+    const varying = t.columns.map((c, ci) => (c.role === 'off' ? 0 : written[ci])).filter((n) => n >= 2)
+    // with the ✓ / ✗ slots not yet marked, the row is judged on its alternatives alone (it counts once marked)
+    const contrastOk = goodCols.length === 1 && badCols.length === 1 ? pairs.length > 0 : true
+    const meetsRule = varying.length > 0 && varying.every((n) => n >= MIN_ALTERNATIVES) && contrastOk && !t.columns.every((c) => c.role === 'off')
+    plans.push({ row, alts, pairs, count, meetsRule })
   })
 
   const perRow = plans.map((p) => ({ row: p.row, count: p.count }))
@@ -456,14 +579,18 @@ export function analyse(t: LexTemplate): Analysis {
   }
   if (overCap) issues.push({ level: 'error', message: `${total.toLocaleString('en-GB')} pairs is more than the ${HARD_CAP.toLocaleString('en-GB')} limit. Split the template into smaller rows.` })
   const ok = !structural && !overCap && !issues.some((i) => i.level === 'error')
-  return { issues, perRow, total, goodCol, badCol, ok, explode, overCap, plans }
+  return { issues, perRow, total, goodCol, badCol, ok, explode, overCap, plans, templates: plans.filter((p) => p.meetsRule).length }
 }
 
 /** French / Catalan elided words written as their own slot ("qu'", "l'", "j'"): no space after them. */
 const ELISION = /(^|[\s(«"])((?:jusqu|lorsqu|puisqu|quoiqu|qu|[cdjlmnst])['’])\s+/giu
 
+/** Zero-width characters (ZWSP, ZWNJ, ZWJ, BOM). Kept inside words (Persian خانه‌ی); stray ones at a word or sentence edge are removed. */
+const ZW_EDGE = /^[\u200B-\u200D\uFEFF]+|[\u200B-\u200D\uFEFF]+$|[\u200B-\u200D\uFEFF]+(?=\s)|(?<=\s)[\u200B-\u200D\uFEFF]+/g
+
 function tidy(s: string, o: LexOptions): string {
-  let out = o.joiner === ' ' ? s.replace(/\s+/g, ' ').replace(/\s+([,.])/g, '$1').replace(ELISION, '$1$2').trim() : s.trim()
+  let out = o.joiner === ' ' ? s.replace(/\s+/g, ' ').replace(ZW_EDGE, '').replace(/\s+([,.])/g, '$1').replace(ELISION, '$1$2').trim() : s.trim()
+  out = out.replace(/^[\s\u200B-\u200D\uFEFF]+|[\s\u200B-\u200D\uFEFF]+$/g, '')
   if (o.capitalise && out) out = out.charAt(0).toLocaleUpperCase() + out.slice(1)
   if (o.endPunct && out && !/[.?!。？！؟…]$/.test(out)) out += o.endPunct
   return out
@@ -575,22 +702,52 @@ export const demoTemplate = (): LexTemplate => templateFromText(DEMO_TEMPLATE_TE
 
 // ---------- review-fatigue checks (deduplication, lexical repetition) ----------
 
+export interface Contradiction<T> { sentence: string; good: T; bad: T }
+
+export interface FilteredPairs<T> {
+  pairs: T[]
+  removed: number                 // repeated + identical
+  repeated: number                // same ✓ and same ✗ sentence as an earlier pair
+  identical: number               // ✓ sentence = ✗ sentence: not a minimal pair
+  contradictions: Contradiction<T>[] // a sentence that is ✓ in one kept pair and ✗ in another
+}
+
 /**
- * Drop repeated minimal pairs (same ✓ and same ✗ sentence), keeping the first occurrence and the
- * original order. Repeats arise when an alternative is listed twice, when an optional slot's empty
- * option meets an explicit ∅, or when two templates of a tab share a row. Nobody should review the
- * same pair twice.
+ * Filter minimal pairs before anyone reads or downloads them, keeping the original order:
+ * - repeated pairs (same ✓ and same ✗ sentence) are dropped, keeping the first. Repeats arise when an
+ *   alternative is listed twice, an optional slot's empty option meets an explicit ∅, or two templates
+ *   of a tab share a row;
+ * - identical pairs (the ✓ sentence equals the ✗ sentence, e.g. the same word in the ✓ and ✗ lists)
+ *   are dropped: they are not minimal pairs;
+ * - contradictions (one sentence labelled ✓ in one pair and ✗ in another) are kept but reported, for
+ *   the lead to resolve: the generator cannot know which label is right.
  */
-export function dedupePairs<T extends { good: string; bad: string }>(pairs: T[]): { pairs: T[]; removed: number } {
+export function dedupePairs<T extends { good: string; bad: string }>(pairs: T[]): FilteredPairs<T> {
   const seen = new Set<string>()
   const out: T[] = []
+  let identical = 0
   for (const p of pairs) {
+    if (p.good === p.bad) { identical++; continue }
     const k = p.good + '\u0000' + p.bad
     if (seen.has(k)) continue
     seen.add(k)
     out.push(p)
   }
-  return { pairs: out, removed: pairs.length - out.length }
+  const removed = pairs.length - out.length
+  return { pairs: out, removed, repeated: removed - identical, identical, contradictions: findContradictions(out) }
+}
+
+/** Sentences that are ✓ in one pair and ✗ in another (first ✓ occurrence, each sentence reported once). */
+export function findContradictions<T extends { good: string; bad: string }>(pairs: T[]): Contradiction<T>[] {
+  const asGood = new Map<string, T>()
+  for (const p of pairs) if (!asGood.has(p.good)) asGood.set(p.good, p)
+  const out: Contradiction<T>[] = []
+  const done = new Set<string>()
+  for (const p of pairs) {
+    const g = asGood.get(p.bad)
+    if (g && !done.has(p.bad)) { done.add(p.bad); out.push({ sentence: p.bad, good: g, bad: p }) }
+  }
+  return out
 }
 
 export interface RepeatedWord {

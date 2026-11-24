@@ -207,6 +207,22 @@ export function TemplateRules() {
   )
 }
 
+/** How to write the sheet so the generator reads it exactly (one line each; the generator flags anything it has to guess). */
+export function SheetConventions() {
+  return (
+    <div className="callout">
+      <b>Sheet conventions the generator relies on</b>
+      <ul style={{ margin: '6px 0 0' }}>
+        <li><b>✓ / ✗ marks:</b> mark the grammatical slot header with ✓ and its ungrammatical partner with ✗ (or start it with <span className="mono">*</span>). Names such as <span className="mono">_mismatch</span> or <span className="mono">_nonagr</span> alone are a guess: the generator asks you to check, and refuses when the names are ambiguous.</li>
+        <li><b>{'{Braces}'}:</b> write every slot header in braces, e.g. <span className="mono">{'{subj_sg}'}</span>, including fixed words that belong in the sentence.</li>
+        <li><b>“Templates:” header:</b> start every slot-pattern header row with a <span className="mono">Templates:</span> cell, so header rows are never read as templates.</li>
+        <li><b>∅ for empty:</b> write <span className="mono">∅</span> when a slot (or the ✗ side) is deliberately empty.</li>
+        <li><b><span className="mono">;</span> keeps commas:</b> to keep a comma inside an alternative, separate that cell's alternatives with <span className="mono">;</span> instead of commas.</li>
+      </ul>
+    </div>
+  )
+}
+
 export function LexicalVariety() {
   return (
     <div className="callout">

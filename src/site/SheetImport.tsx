@@ -6,7 +6,7 @@
 
 import React, { useMemo, useState } from 'react'
 import {
-  analyse, expand, manyToDelimited, repeatedWords, samplePairs, sheetToTemplates, REPEAT_MIN_LETTERS,
+  analyse, expand, findContradictions, manyToDelimited, repeatedWords, samplePairs, sheetToTemplates, REPEAT_MIN_LETTERS,
   type LexOptions, type LexTemplate, type SheetTemplate, type SlotRole, type GeneratedPair,
 } from '../lib/lexgen'
 import { downloadText } from '../lib/download'
@@ -32,14 +32,17 @@ export default function SheetImport({ o, onOpen }: { o: LexOptions; onOpen: (t: 
   const read = () => { setItems(sheetToTemplates(text)); setSamples({}); setNote('') }
   const cycleRole = (k: number, ci: number) => setItems((cur) => cur.map((s, i) => {
     if (i !== k) return s
-    const columns = s.template.columns.map((c, j) => (j === ci ? { ...c, role: NEXT_ROLE[c.role] } : c))
+    const columns = s.template.columns.map((c, j) => (j === ci ? { ...c, role: NEXT_ROLE[c.role], inferred: false } : c))
     return { ...s, template: { ...s.template, columns } }
   }))
 
   const analysed = useMemo(() => items.map((s) => ({ s, a: analyse(s.template) })), [items])
   const ok = analysed.filter((x) => x.a.ok)
   const totalPairs = ok.reduce((n, x) => n + x.a.total, 0)
-  const templateCount = analysed.reduce((n, x) => n + x.a.plans.length, 0)
+  // a template = a row with 3+ alternatives in every varying slot and a usable ✓ / ✗ contrast (not
+  // every parsed row: rows that fail the rule or have a broken contrast are not counted)
+  const rowCount = analysed.reduce((n, x) => n + x.a.plans.length, 0)
+  const templateCount = analysed.reduce((n, x) => n + x.a.templates, 0)
 
   // templates per macro / sub (a template = one row of alternatives under a slot pattern)
   const coverage = useMemo(() => {
@@ -49,7 +52,7 @@ export default function SheetImport({ o, onOpen }: { o: LexOptions; onOpen: (t: 
       const sk = s.template.sub || NO_SUB
       if (!m.has(mk)) m.set(mk, new Map())
       const subs = m.get(mk)!
-      subs.set(sk, (subs.get(sk) ?? 0) + a.plans.length)
+      subs.set(sk, (subs.get(sk) ?? 0) + a.templates)
     }
     return m
   }, [analysed])
@@ -59,21 +62,29 @@ export default function SheetImport({ o, onOpen }: { o: LexOptions; onOpen: (t: 
   const heavy = Math.max(5, Math.ceil(templateCount * 0.1))
 
   const download = (sep: ',' | '\t') => {
-    // deduplicate across the whole tab: nobody should review the same pair twice
+    // deduplicate across the whole tab (nobody should review the same pair twice) and drop identical ✓ = ✗ pairs
     const seen = new Set<string>()
     let removed = 0
+    let identical = 0
     const groups = ok.map(({ s, a }) => ({
       t: s.template,
       pairs: Array.from(expand(s.template, o, a)).filter((p) => {
+        if (p.good === p.bad) { identical++; return false }
         const key = p.good + '\u0000' + p.bad
         if (seen.has(key)) { removed++; return false }
         seen.add(key)
         return true
       }),
     }))
+    const contradictions = findContradictions(groups.flatMap((g) => g.pairs)).length
     const body = manyToDelimited(groups, sep)
     downloadText(`xblimps_tab_pairs.${sep === ',' ? 'csv' : 'tsv'}`, (sep === ',' ? '﻿' : '') + body, sep === ',' ? 'text/csv' : 'text/tab-separated-values')
-    setNote(`${seen.size.toLocaleString('en-GB')} unique pairs downloaded${removed ? ` · ${removed.toLocaleString('en-GB')} repeated pair${removed === 1 ? '' : 's'} removed` : ''}`)
+    setNote([
+      `${seen.size.toLocaleString('en-GB')} unique pairs downloaded`,
+      removed ? `${removed.toLocaleString('en-GB')} repeated removed` : '',
+      identical ? `${identical.toLocaleString('en-GB')} identical ✓ = ✗ removed` : '',
+      contradictions ? `${contradictions.toLocaleString('en-GB')} sentence${contradictions === 1 ? '' : 's'} labelled both ✓ and ✗: check the lists` : '',
+    ].filter(Boolean).join(' · '))
   }
   const sampleAll = () => {
     const out: Record<number, GeneratedPair[]> = {}
@@ -98,10 +109,12 @@ export default function SheetImport({ o, onOpen }: { o: LexOptions; onOpen: (t: 
           In your language sheet, select the whole tab (click the top-left corner, or Ctrl/⌘+A), copy, and paste it here.
           The tool finds every slot pattern (the <b>Templates:</b> header rows or rows of <b>{'{slots}'}</b>) and the templates under it,
           reads the macro- and subphenomenon from the left-hand columns, counts templates against the targets and lists words repeated
-          across many templates. It understands the sheet conventions:
-          <b> *{'{…}'}</b> or <b>_mismatch</b> / <b>_nonagr</b> marks the ✗ slot; a doubled comma (<b>mare,, Em</b>) or a
-          trailing comma (<b>(partir,)</b>) is a real comma; a <i>“commas are not a delimiter in the X cell”</i> note is
-          respected; <b>(optional)</b> slots can be left out; Persian <b>،</b> works as a separator.
+          across many templates. Best results: start each header row with <b>Templates:</b>, put every slot in <b>{'{braces}'}</b>, and mark the
+          contrast <b>✓</b> / <b>✗</b> (or <b>*</b>). It also reads the other sheet conventions:
+          <b>_mismatch</b> / <b>_nonagr</b> names for the ✗ slot (roles guessed from names are flagged for you to check, and left unset when the
+          names are ambiguous); a doubled comma (<b>mare,, Em</b>), a trailing comma (<b>(partir,)</b>) or a cell in <b>[square brackets]</b> keeps
+          a real comma; a <i>“commas are not a delimiter in the X cell”</i> note is respected; <b>(optional)</b> slots can be left out; Persian
+          <b> ،</b> works as a separator. Columns right of the last {'{slot}'} are shown, never dropped silently.
         </div>
         <textarea className="paste" value={text} onChange={(e) => setText(e.target.value)} aria-label="Paste a whole sheet tab"
           placeholder={'Macrophenomenon\tSubphenomenon\tTemplates:\t{subj}\t{V_sg}\t*{V_sg_mismatch}\n\t\t1.0\t(alternative, alternative, alternative)\t(…)\t(…)'} />
@@ -109,7 +122,8 @@ export default function SheetImport({ o, onOpen }: { o: LexOptions; onOpen: (t: 
           <button className="btn btn-primary btn-sm" onClick={read} disabled={!text.trim()}>Read the tab</button>
           {items.length > 0 && (
             <span className="muted" style={{ fontSize: 13 }}>
-              {items.length} slot pattern{items.length === 1 ? '' : 's'} · <b>{templateCount} template{templateCount === 1 ? '' : 's'}</b> ·
+              {items.length} slot pattern{items.length === 1 ? '' : 's'} · {rowCount} row{rowCount === 1 ? '' : 's'} read ·{' '}
+              <b>{templateCount} template{templateCount === 1 ? '' : 's'}</b> (3+ alternatives in every varying slot) ·
               {' '}{ok.length} ready · {totalPairs.toLocaleString('en-GB')} generated pairs (before deduplication)
             </span>
           )}
@@ -122,6 +136,7 @@ export default function SheetImport({ o, onOpen }: { o: LexOptions; onOpen: (t: 
             <div className="faint" style={{ fontSize: 12.5, marginBottom: 6 }}>
               Target for 11 December: ~{PER_LANGUAGE.toLocaleString('en-GB')} templates per language (10 macrophenomena × {PER_MACRO}) → ~{GENERATED_PER_LANGUAGE.toLocaleString('en-GB')} generated sentences.
               Subphenomena are optional, at most 3 per macro: 2 → 50 each; 3 → at least 33 each. Only templates count; generated sentences and alternatives do not.
+              A row counts as a template when every varying slot (✓ / ✗ included) has 3 or more alternatives and its ✓ / ✗ lists pair up; other rows are listed below but not counted.
             </div>
             <div className="t-wrap">
               <table className="t">
@@ -185,6 +200,7 @@ export default function SheetImport({ o, onOpen }: { o: LexOptions; onOpen: (t: 
                 <tbody>
                   {analysed.map(({ s, a }, k) => {
                     const err = a.issues.find((i) => i.level === 'error')
+                    const warn = err ? undefined : a.issues.find((i) => i.level === 'warning' && i.row === undefined)
                     return (
                       <React.Fragment key={k}>
                         <tr>
@@ -197,11 +213,12 @@ export default function SheetImport({ o, onOpen }: { o: LexOptions; onOpen: (t: 
                               </button>
                             ))}
                           </td>
-                          <td>{a.plans.length}</td>
+                          <td title="rows that count as templates / rows read">{a.templates}{a.templates !== a.plans.length ? ` of ${a.plans.length}` : ''}</td>
                           <td>{a.ok ? a.total.toLocaleString('en-GB') : <span className="bad-txt" title={err?.message}>needs a fix</span>}</td>
                           <td><button className="btn btn-sm btn-ghost" onClick={() => onOpen(s.template)}>Open in generator ↑</button></td>
                         </tr>
                         {err && <tr><td /><td colSpan={5} className="bad-txt" style={{ fontSize: 12.5 }}>{err.row ? `Template ${err.row}: ` : ''}{err.message}</td></tr>}
+                        {warn && <tr><td /><td colSpan={5} className="warn-txt" style={{ fontSize: 12.5 }}>{warn.message}</td></tr>}
                         {samples[k]?.map((p, j) => (
                           <tr key={`s${j}`} className="sample-row"><td /><td colSpan={2} className="pair-good">{p.good}</td><td colSpan={3} className="pair-bad">{p.bad}</td></tr>
                         ))}

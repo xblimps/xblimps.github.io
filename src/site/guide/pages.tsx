@@ -8,7 +8,7 @@ import React, { useMemo } from 'react'
 import { loadIntoGenerator } from '../Generator'
 import {
   Principle, PromptTemplateTable, WorkedTable, DivisionTable, Workflow, GroundRules, PROMPT_HEAD,
-  Terminology, Targets, Timeline, Sessions, Languages, TemplateRules, LexicalVariety, PendingAdmin, MEET_URL,
+  Terminology, Targets, Timeline, Sessions, Languages, TemplateRules, LexicalVariety, PendingAdmin, MEET_URL, SheetConventions,
 } from './common'
 import { analyse, demoTemplate, dedupePairs, expand, splitAlternatives, DEFAULT_OPTIONS, WARN_PER_ROW } from '../../lib/lexgen'
 
@@ -176,6 +176,7 @@ export function Native() {
 
       <h2>How to write a template</h2>
       <TemplateRules />
+      <SheetConventions />
       <p>See it done step by step in the <a href="#/guide/demo">Worked Demo</a>; more tips and common mistakes are in <a href="#/guide/advice">Advice</a>.</p>
 
       <h2>Naturalness</h2>
@@ -399,6 +400,7 @@ export function Advice() {
 
       <h2>Writing rules</h2>
       <TemplateRules />
+      <SheetConventions />
 
       <h2>Lexical variety</h2>
       <LexicalVariety />
@@ -433,9 +435,11 @@ export function Advice() {
         <tbody>
           <tr><td>“Mark one slot as ✓” or “as ✗”</td><td>Set the role of the grammatical slot to ✓ and its ungrammatical partner to ✗ in the slot header (or put ✓ / ✗ in the header text before pasting).</td></tr>
           <tr><td>My pasted sheet arrived as one column</td><td>Select the cells in the sheet and copy them (they paste as tab-separated). Or paste CSV or a Markdown table.</td></tr>
-          <tr><td>An alternative contains a comma</td><td>Double it (<span className="mono">Segons la meva mare,, Em van dir que</span>), or end a single alternative with it (<span className="mono">(partir,)</span>), or separate that cell's alternatives with <span className="mono">|</span> or <span className="mono">;</span> instead. A sheet note “commas are not a delimiter in the X cell” is also understood.</td></tr>
+          <tr><td>An alternative contains a comma</td><td>Separate that cell's alternatives with <span className="mono">;</span> (or <span className="mono">|</span>) instead of commas. Also understood: a doubled comma (<span className="mono">Segons la meva mare,, Em van dir que</span>), a single alternative ending with it (<span className="mono">(partir,)</span>) or wrapped in square brackets (<span className="mono">[fatiguée, elle se réveille très tôt]</span>), and a sheet note saying commas are not a delimiter in a named {'{slot}'}.</td></tr>
           <tr><td>My sheet has many slot patterns in one tab</td><td>Paste the whole tab into “Check a whole language sheet” on the generator page: it finds every slot pattern, counts templates against the targets, lists repeated words, gives three sample pairs per slot pattern and downloads all the pairs at once.</td></tr>
-          <tr><td>The download has fewer pairs than the count</td><td>Repeated pairs (the same ✓ and ✗ sentence twice) are removed before download; the page says how many.</td></tr>
+          <tr><td>The download has fewer pairs than the count</td><td>Repeated pairs (the same ✓ and ✗ sentence twice) and pairs whose ✓ and ✗ sentences are identical are removed before download; the page says how many. A sentence labelled ✓ in one pair and ✗ in another is kept but flagged: check the ✓ and ✗ lists.</td></tr>
+          <tr><td>“✓ / ✗ were read from the slot names”</td><td>The headers have no ✓ / ✗ marks, so the generator guessed from names like <span className="mono">_mismatch</span>. Check the first pairs; then mark the headers ✓ and ✗ in the sheet. If the names are ambiguous (e.g. <span className="mono">{'{PTCP_nonagr}'}</span> before <span className="mono">{'{PTCP_agr}'}</span>), nothing is generated until you mark them.</td></tr>
+          <tr><td>“… is to the right of the last {'{slot}'}”</td><td>A header without braces after the last slot is left out of the sentences (e.g. an author column). If the words belong in the sentence, put the header in {'{braces}'}.</td></tr>
           <tr><td>I want a slot to be sometimes empty</td><td>Add <span className="mono">∅</span> as one of its alternatives.</td></tr>
           <tr><td>My language is written without spaces</td><td>Set “Join slots with” to “nothing”, and adjust capitalisation and the final punctuation.</td></tr>
           <tr><td>The CSV shows strange characters in Excel</td><td>The CSV is UTF-8 (with a byte-order mark). If it still looks wrong, download the TSV, or import the file as UTF-8.</td></tr>

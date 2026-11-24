@@ -70,30 +70,29 @@ export default function Generator() {
   useEffect(() => { if (!toast) return; const h = setTimeout(() => setToast(''), 2200); return () => clearTimeout(h) }, [toast])
 
   const a = useMemo(() => analyse(t), [t])
-  // preview: the first PREVIEW_N distinct pairs (repeats are skipped, as in the download)
+  // preview: the first PREVIEW_N distinct pairs (repeats and identical ✓ = ✗ pairs are skipped, as in the download)
   const preview = useMemo(() => {
     if (!a.ok) return []
     const out: GeneratedPair[] = []
     const seen = new Set<string>()
     for (const p of expand(t, o, a)) {
       const k = p.good + '\u0000' + p.bad
-      if (seen.has(k)) continue
+      if (p.good === p.bad || seen.has(k)) continue
       seen.add(k); out.push(p)
       if (out.length >= PREVIEW_N) break
     }
     return out
   }, [t, o, a])
-  // repeated pairs (same ✓ and ✗ sentence), counted live for templates of a reasonable size
-  const repeats = useMemo(() => {
+  // repeated and identical pairs, and ✓/✗ contradictions, counted live for templates of a reasonable size
+  const filtered = useMemo(() => {
     if (!a.ok || a.total > UNIQUE_LIVE_MAX) return null
-    const seen = new Set<string>()
-    for (const p of expand(t, o, a)) seen.add(p.good + '\u0000' + p.bad)
-    return a.total - seen.size
+    return dedupePairs(Array.from(expand(t, o, a)))
   }, [t, o, a])
 
   // ---- editing helpers ----
+  // a role chosen by hand is no longer "inferred" from the slot names
   const setCol = (ci: number, patch: Partial<LexTemplate['columns'][number]>) =>
-    setT((cur) => ({ ...cur, columns: cur.columns.map((c, i) => (i === ci ? { ...c, ...patch } : c)) }))
+    setT((cur) => ({ ...cur, columns: cur.columns.map((c, i) => (i === ci ? { ...c, ...patch, ...('role' in patch ? { inferred: false } : {}) } : c)) }))
   const setCell = (ri: number, ci: number, v: string) =>
     setT((cur) => ({ ...cur, rows: cur.rows.map((r, i) => (i === ri ? r.map((c, j) => (j === ci ? v : c)) : r)) }))
   const addCol = () => setT((cur) => {
@@ -120,12 +119,14 @@ export default function Generator() {
   }
 
   // every pair, deduplicated: nobody should review the same pair twice
-  const all = () => (a.ok ? dedupePairs(Array.from(expand(t, o, a))) : { pairs: [], removed: 0 })
+  // identical ✓ = ✗ pairs are dropped too; contradictions are reported on the page
+  const all = () => (a.ok ? dedupePairs(Array.from(expand(t, o, a))) : { pairs: [] as GeneratedPair[], removed: 0, repeated: 0, identical: 0, contradictions: [] })
   const dl = (sep: ',' | '\t') => {
-    const { pairs, removed } = all()
+    const { pairs, repeated, identical } = all()
     if (!pairs.length) return
     const body = pairsToDelimited(t, pairs, sep)
-    setToast(`${pairs.length.toLocaleString('en-GB')} unique pairs${removed ? ` (${removed} repeated removed)` : ''}`)
+    const dropped = [repeated ? `${repeated} repeated` : '', identical ? `${identical} identical` : ''].filter(Boolean).join(', ')
+    setToast(`${pairs.length.toLocaleString('en-GB')} unique pairs${dropped ? ` (${dropped} removed)` : ''}`)
     downloadText(`${safeName(t.name)}_pairs.${sep === ',' ? 'csv' : 'tsv'}`, (sep === ',' ? '﻿' : '') + body, sep === ',' ? 'text/csv' : 'text/tab-separated-values')
   }
 
@@ -220,10 +221,11 @@ export default function Generator() {
             <div style={{ marginBottom: 14 }}>
               <div className="muted" style={{ fontSize: 13, marginBottom: 6 }}>
                 Copy the header row and one or more template rows from your sheet (Google Sheets / Excel cells paste as tab-separated), or paste
-                CSV or a Markdown table. Mark the grammatical header with <b>✓</b> and the ungrammatical one with <b>✗</b> (or start it with <b>*</b>).
-                Separate alternatives with commas (Persian <b>،</b> works too). For a real comma inside an alternative, double it
-                (<b>Segons la meva mare,, Em van dir que</b>), end a single alternative with it (<b>(partir,)</b>), or separate the
-                alternatives with <b>|</b> or <b>;</b> instead. Write <b>∅</b> for “leave empty”.
+                CSV or a Markdown table. Mark the grammatical header with <b>✓</b> and the ungrammatical one with <b>✗</b> (or start it with <b>*</b>);
+                without marks the roles are guessed from names like <b>_mismatch</b> and the page asks you to check them.
+                Separate alternatives with commas (Persian <b>،</b> works too). For a real comma inside an alternative, separate the
+                alternatives with <b>;</b> (or <b>|</b>) instead, double the comma (<b>Segons la meva mare,, Em van dir que</b>), or wrap a single
+                alternative in square brackets (<b>[fatiguée, elle se réveille très tôt]</b>). Write <b>∅</b> for “leave empty”.
               </div>
               <textarea className="paste" dir="auto" value={paste} onChange={(e) => setPaste(e.target.value)}
                 placeholder={'{subj_sg}\t{rel}\t{V_trans}\t{obj_pl}\t{VP_sg} ✓\t*{VP_pl} ✗\n(the refrigerator, the freezer)\tthat\t(stores, holds)\t(all the cakes)\t(runs too cold)\t(run too cold)'} />
@@ -314,7 +316,8 @@ export default function Generator() {
             <div className="count-big">{a.ok ? a.total.toLocaleString('en-GB') : '–'}</div>
             <div className="muted">
               generated pair{a.total === 1 ? '' : 's'} from <b>{a.plans.length} template{a.plans.length === 1 ? '' : 's'}</b> (templates count; generated pairs do not)
-              {repeats != null && repeats > 0 && <> · {repeats.toLocaleString('en-GB')} repeated pair{repeats === 1 ? '' : 's'} removed from the preview and downloads</>}
+              {filtered != null && filtered.repeated > 0 && <> · {filtered.repeated.toLocaleString('en-GB')} repeated pair{filtered.repeated === 1 ? '' : 's'} removed from the preview and downloads</>}
+              {filtered != null && filtered.identical > 0 && <> · {filtered.identical.toLocaleString('en-GB')} pair{filtered.identical === 1 ? '' : 's'} with identical ✓ and ✗ sentences removed</>}
               {a.ok && a.total > PREVIEW_N && <> · showing the first {PREVIEW_N} distinct</>}
             </div>
           </div>
@@ -325,6 +328,18 @@ export default function Generator() {
               (or {WARN_TOTAL.toLocaleString('en-GB')} in total) usually means some alternatives do not combine naturally with each other,
               and nobody can check that many by hand. Keep each slot to the options that work with <i>every</i> option in the other slots,
               or split the row into several smaller rows. Generated pairs and alternatives do not count toward your total: templates (rows) do.
+            </div>
+          )}
+
+          {filtered != null && filtered.contradictions.length > 0 && (
+            <div className="explode">
+              <b>{filtered.contradictions.length} sentence{filtered.contradictions.length === 1 ? ' is' : 's are'} labelled ✓ in one pair and ✗ in another.</b>{' '}
+              The generator cannot tell which label is right, so these pairs are kept: check the ✓ and ✗ lists of the rows involved. For example:
+              <ul style={{ margin: '6px 0 0' }}>
+                {filtered.contradictions.slice(0, 3).map((c, k) => (
+                  <li key={k} dir="auto">“{c.sentence}”: ✓ in row {c.good.row}, ✗ in row {c.bad.row}</li>
+                ))}
+              </ul>
             </div>
           )}
 
