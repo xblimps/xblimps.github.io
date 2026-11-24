@@ -1,4 +1,4 @@
-# xBLiMPs: lexical generator, instructions and annotation platform
+# xBLiMPs: lexical generator and instructions (https://xblimps.github.io/)
 
 The site opens on the **lexical generator** (`#/`), the central tool. Two entry points sit side by
 side: paste a slot pattern (slot headers, one ✓ and one ✗ slot) with one or more **templates** (rows
@@ -14,14 +14,22 @@ never calls a model and never writes words: every token comes from the human-wri
 Terms (Suchir, 23–24 Nov 2026): a **template** is the unit that counts (one sheet row, formerly
 "seed sentence"); a **slot pattern** is the lead's structure; **generated sentences** do not count.
 
-The **guide** (`#/guide`) is the one place for instructions: overview with languages, terms,
-targets, timeline and sessions (`#/guide`), how to write a template with the worked example
-(`#/guide/write`), language leads (`#/guide/lead`), native-speaker contributors (`#/guide/native`),
-FAQ (`#/guide/faq`), a full worked demonstration (`#/guide/demo`), heuristics and troubleshooting
-(`#/guide/help`) and the handover checklist (`#/guide/handover`). Source: `src/site/`.
+Canonical site: **https://xblimps.github.io/** (GitHub Pages, deployed from `main` by
+`.github/workflows/deploy.yml`). The Vercel deployment is retired; do not link to it.
 
-The earlier **annotation platform** is unchanged and lives at `#/app` (sign-in); links that carry
-its own parameters (`?demo=`, `?go=`, `?lang=`, email sign-in links) still open it directly.
+Public navigation is deliberately minimal: 🪄 **Lexical generator** (`#/`, with the sheet check),
+**Instructions** (`#/guide`: languages, terms, targets, workflow, timeline, sessions in UK time),
+**I'm a Language Lead** (`#/guide/lead`, including the handover checklists), **I'm a Native
+Speaker** (`#/guide/native`), **Worked Demo** (`#/guide/demo`: slot pattern → template → how the
+generator combines → deduplication/filtering → minimal pairs → checking, computed live) and
+**Advice** (`#/guide/advice`: writing rules, lexical variety, common mistakes, ambiguous cases,
+generator troubleshooting, who to ask, FAQ). Older routes (`#/guide/write`, `/faq`, `/help`,
+`/handover`) still resolve to the page that holds their content. Source: `src/site/`.
+
+The **annotation platform** (`#/app`, sign-in) is **admin-only**: `App.tsx` renders its modules
+only when `isAdmin(profile)`; any other signed-in user sees just the wand, linking back to the
+generator. Links that carry its own parameters (`?demo=`, `?go=`, `?lang=`, email sign-in links)
+still open it directly; demo logins appear only in local (no-backend) builds.
 
 ---
 

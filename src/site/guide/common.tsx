@@ -63,7 +63,7 @@ export function Targets() {
     <div className="t-wrap">
       <table className="t">
         <tbody>
-          <tr><td><b>Per language</b></td><td><b>~1,000 templates</b> → ~10,000 generated sentences</td></tr>
+          <tr><td><b>Per language</b></td><td><b>~1,000 templates</b> → ~10,000 generated sentences (about 10 per template on average after filtering; not a maximum)</td></tr>
           <tr><td>Macrophenomena</td><td>10 per language, <b>100 templates each</b> (10 × 100 = 1,000)</td></tr>
           <tr><td>Subphenomena</td><td>Optional, at most 3 per macrophenomenon: none → 100 templates; 2 → 50 each; 3 → at least 33 each</td></tr>
           <tr><td>What counts</td><td>Templates (rows) only. Lexical alternatives and generated sentences do not count; leads' own templates do, at the same quality bar.</td></tr>

@@ -278,12 +278,14 @@ ExportCorpus · ComputeStatistics · SearchEntities · DiffTemplateVersions
 
 ---
 
-## 15. Hosting, auth & roles (DECIDED: Vercel + Supabase)
+## 15. Hosting, auth & roles (DECIDED: Vercel + Supabase; hosting superseded 24 Nov 2026)
 
-**Hosting decision (2026-06-18):** static frontend deploys to a **free Vercel subdomain `https://xblimps.vercel.app`** (its own Vercel project, fully isolated from the professional site `suchirsalhan.com`); **Supabase** is the backend at its own managed `*.supabase.co` URL. No custom domain is purchased. The earlier GitHub-Pages target and its hash-routing constraint are **superseded** — Vercel SPA rewrites allow clean browser routing.
+> **Superseded (24 Nov 2026):** the canonical site is **https://xblimps.github.io/** (GitHub Pages, deployed from `main`, hash routes such as `#/guide/lead`); the backend is Firebase. The Vercel deployment is retired and must not be linked. The original 2026-06-18 decision is kept below for the record.
+
+**Hosting decision (2026-06-18):** static frontend deploys to a **free Vercel subdomain** (since retired; now https://xblimps.github.io/) (its own Vercel project, fully isolated from the professional site `suchirsalhan.com`); **Supabase** is the backend at its own managed `*.supabase.co` URL. No custom domain is purchased. The earlier GitHub-Pages target and its hash-routing constraint are **superseded** — Vercel SPA rewrites allow clean browser routing.
 
 Architecture:
-- **Front end:** static SPA (React/Vite + TS) at `https://xblimps.vercel.app`, **clean-routed** (`/welsh/agreement`) via Vercel SPA rewrites. Supabase keys injected as Vercel env vars; per-branch preview deploys used during parallel agent build.
+- **Front end:** static SPA (React/Vite + TS) at https://xblimps.github.io/ (originally a Vercel subdomain, retired), **clean-routed** (`/welsh/agreement`) via Vercel SPA rewrites. Supabase keys injected as Vercel env vars; per-branch preview deploys used during parallel agent build.
 - **Auth + versioned data store:** **Supabase (Postgres + Auth + RLS)** for real multi-user concurrency, per-entity provenance, and the relational entity model above. Postgres also makes versioning, search, and diagnostics natural.
 - **Login-gated:** the app loads no data pre-auth.
 

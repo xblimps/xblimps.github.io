@@ -1,44 +1,47 @@
 // The guide: the one place for xBLiMPs instructions for language leads and native-speaker
-// contributors. Terms, targets and dates follow Suchir's decisions of 23–24 Nov 2026
+// contributors, in five pages: Instructions (overview), I'm a Language Lead, I'm a Native Speaker,
+// Worked Demo and Advice. Terms, targets and dates follow Suchir's decisions of 23–24 Nov 2026
 // (template = the unit that counts; slot pattern = the lead's structure). Items still being
 // confirmed are described as pending and never stated as policy.
 
 import React, { useMemo } from 'react'
+import { loadIntoGenerator } from '../Generator'
 import {
   Principle, PromptTemplateTable, WorkedTable, DivisionTable, Workflow, GroundRules, PROMPT_HEAD,
   Terminology, Targets, Timeline, Sessions, Languages, TemplateRules, LexicalVariety, PendingAdmin, MEET_URL,
 } from './common'
-import { analyse, demoTemplate, expand, splitAlternatives } from '../../lib/lexgen'
+import { analyse, demoTemplate, dedupePairs, expand, splitAlternatives, DEFAULT_OPTIONS, WARN_PER_ROW } from '../../lib/lexgen'
 
-// ---------------------------------------------------------------- overview
-export function Hub() {
+// ---------------------------------------------------------------- Instructions (overview)
+export function Instructions() {
   return (
     <div className="prose">
-      <div className="eyebrow-s">Guide</div>
+      <div className="eyebrow-s">Instructions</div>
       <h1>Everything you need to write xBLiMPs templates</h1>
       <p className="lede">
         xBLiMPs is a crowd-built, multilingual benchmark of minimal pairs in the style of BLiMP: pairs of sentences that are
         identical except for one place, where one sentence is grammatical (✓) and the other is not (✗). Language leads design
         slot patterns; native speakers write templates under them; the <a href="#/">lexical generator</a> turns each template into minimal pairs.
-        This guide is the one place for the instructions.
+        This site is the one place for the instructions, for every project language.
       </p>
 
       <div className="roles">
         <a className="role-card" href="#/guide/lead">
           <div className="eyebrow-s">Linguistic expertise</div>
-          <h3>I'm a language lead</h3>
+          <h3>I'm a Language Lead</h3>
           <p>Design and validate slot patterns, write the first templates, give contributors instructions and review their templates.</p>
           <div className="go">Lead instructions →</div>
         </a>
         <a className="role-card" href="#/guide/native">
           <div className="eyebrow-s">Native-speaker expertise</div>
-          <h3>I'm a native-speaker contributor</h3>
+          <h3>I'm a Native Speaker</h3>
           <p>Write templates under your lead's slot pattern, 3–4 natural alternatives in every slot, check the generated pairs and flag problems.</p>
           <div className="go">Contributor instructions →</div>
         </a>
       </div>
 
       <h2>Languages</h2>
+      <p>Nine languages, one shared method. The generator and these pages are the same for all of them.</p>
       <Languages />
 
       <h2>Terms</h2>
@@ -59,58 +62,16 @@ export function Hub() {
       <PromptTemplateTable />
       <p>Three templates under that one slot pattern:</p>
       <WorkedTable />
-      <p>More in <a href="#/guide/write">how to write a template</a> and the <a href="#/guide/demo">worked demonstration</a>, or open it in the <a href="#/">lexical generator</a>.</p>
+      <p>The <a href="#/guide/demo">Worked Demo</a> follows this example step by step through the generator; the writing rules are in <a href="#/guide/advice">Advice</a>.</p>
 
       <h2>Timeline</h2>
       <Timeline />
 
-      <h2>Sessions</h2>
+      <h2>Sessions (UK time)</h2>
       <Sessions />
 
       <GroundRules />
-      <p>Questions? See the <a href="#/guide/faq">FAQ</a>.</p>
-    </div>
-  )
-}
-
-// ---------------------------------------------------------------- how to write a template
-export function Write() {
-  return (
-    <div className="prose">
-      <div className="eyebrow-s">For leads and contributors</div>
-      <h1>How to write a template</h1>
-      <p className="lede">
-        A template is one row under a slot pattern, with 3–4 human-written alternatives in every varying slot. It is the unit that counts:
-        the generated sentences it expands into do not.
-      </p>
-      <Principle />
-
-      <h2>The rules</h2>
-      <TemplateRules />
-
-      <h2>Worked example</h2>
-      <p>The slot pattern (headers) with one template's alternatives:</p>
-      <PromptTemplateTable />
-      <p>
-        One template: 3 subjects × 1 relativiser × 3 verbs × 3 objects × 2 ✓ / ✗ endings. Every subject works with every verb and every object, and the ✗ ending
-        differs from its ✓ partner only in agreement. Here are three templates under the same slot pattern:
-      </p>
-      <WorkedTable />
-      <p>
-        The rows do not all vary in the same way: each finds its own subject, verb and object, and the third uses <i>who</i> because its subject is a person.
-        For a language-specific version, take three rows of one slot pattern from your language's final templates and keep the column labels identical across rows.
-      </p>
-
-      <h2>Lexical variety</h2>
-      <LexicalVariety />
-
-      <h2>Check it in the generator</h2>
-      <ol className="steps">
-        <li>Paste the header row and your template rows into the <a href="#/">lexical generator</a> (or paste a whole sheet tab into the sheet check).</li>
-        <li>Read every generated pair. Each ✓ must be natural; each ✗ must be wrong only because of the phenomenon.</li>
-        <li>If one combination fails, remove that alternative or move it to its own row. If the slot pattern itself does not work in your language, flag it to your lead.</li>
-      </ol>
-      <GroundRules />
+      <p>Questions? See <a href="#/guide/advice">Advice</a> (including the FAQ), or ask your language lead.</p>
     </div>
   )
 }
@@ -119,7 +80,7 @@ export function Write() {
 export function Lead() {
   return (
     <div className="prose">
-      <div className="eyebrow-s">For language leads</div>
+      <div className="eyebrow-s">I'm a Language Lead</div>
       <h1>Language lead instructions</h1>
       <p className="lede">
         You maximise the quality of the scaffold: linguistically validated slot patterns, clear instructions that let native speakers write templates
@@ -155,7 +116,7 @@ export function Lead() {
             <tr><td><b>What to vary</b></td><td>Which slots the contributor fills, and what kind of word or phrase belongs there, in plain words.</td></tr>
             <tr><td><b>What stays constant</b></td><td>The structure, word order and anything that carries the contrast.</td></tr>
             <tr><td><b>How to fill the slots</b></td><td>3–4 alternatives per slot, how to write the ✗ version, what to do with optional slots, gender/number consistency within the row.</td></tr>
-            <tr><td><b>A worked example</b></td><td>Three rows of the slot pattern, identical columns, like the <a href="#/guide/write">worked example</a>.</td></tr>
+            <tr><td><b>A worked example</b></td><td>Three rows of the slot pattern, identical columns, like the one in the <a href="#/guide/demo">Worked Demo</a>.</td></tr>
           </tbody>
         </table>
       </div>
@@ -172,8 +133,14 @@ export function Lead() {
       <h2>5. Documentation</h2>
       <p>Each macrophenomenon (ideally each subphenomenon) gets a 1–3 sentence description for the paper's appendix, plus one ✓ and one starred ✗ example.</p>
 
-      <h2>6. Handover</h2>
-      <p>See <a href="#/guide/handover">handover between leads and contributors</a> for what to send and what comes back.</p>
+      <h2>6. Handover to contributors</h2>
+      <p>A good packet means contributors can start without questions; a good return means you only review what needs judgement.</p>
+      <h3>What you send</h3>
+      <HandoverPacket />
+      <h3>What comes back</h3>
+      <ContributorReturn />
+      <h3>Closing the loop</h3>
+      <ClosingLoop />
 
       <h2>Working together</h2>
       <ul>
@@ -189,7 +156,7 @@ export function Lead() {
 export function Native() {
   return (
     <div className="prose">
-      <div className="eyebrow-s">For native-speaker contributors</div>
+      <div className="eyebrow-s">I'm a Native Speaker</div>
       <h1>Contributor instructions</h1>
       <p className="lede">
         You bring what no linguist can provide alone: a native speaker's sense of what sounds natural. Your language lead gives you a validated slot pattern
@@ -209,7 +176,7 @@ export function Native() {
 
       <h2>How to write a template</h2>
       <TemplateRules />
-      <p>The full version, with a worked example, is in <a href="#/guide/write">how to write a template</a>.</p>
+      <p>See it done step by step in the <a href="#/guide/demo">Worked Demo</a>; more tips and common mistakes are in <a href="#/guide/advice">Advice</a>.</p>
 
       <h2>Naturalness</h2>
       <ul>
@@ -218,6 +185,9 @@ export function Native() {
         <li>Never force variation: if a slot has fewer natural options, tell your lead rather than adding awkward ones.</li>
       </ul>
       <LexicalVariety />
+
+      <h2>Before you hand back</h2>
+      <ContributorReturn />
 
       <h2>When and how to flag</h2>
       <p>Flag a slot pattern to your language lead when it is <b>confusing</b>, <b>unnatural</b> in your language, or <b>impossible to complete</b>
@@ -231,101 +201,160 @@ export function Native() {
         <li>Co-authorship: about 300 templates, agreed with the team in advance, plus an OpenReview account before 11 Dec. Paid contributors cannot be authors.</li>
       </ul>
       <PendingAdmin />
-      <p>Questions? Your language lead is your first port of call; the <a href="#/guide">sessions</a> are open to every language.</p>
+      <p>Questions? Your language lead is your first port of call; the <a href="#/guide">sessions</a> (UK time) are open to every language.</p>
       <GroundRules />
     </div>
   )
 }
 
-// ---------------------------------------------------------------- FAQ
-const FAQ: [string, React.ReactNode][] = [
-  ['What counts toward the target?', <>Templates. A template is one row under a slot pattern, with 3–4 human-written alternatives in every varying slot, including the ✓ / ✗ contrast slot.</>],
-  ['What was a "seed sentence"?', <>The same thing: a template (previously called a seed sentence). The site and the guidelines now say "template" only.</>],
-  ['Do the generated sentences count?', <>No. 3 subjects × 3 verbs × 3 prepositions is 27 realisations, and it is still one template.</>],
-  ['How many templates per language?', <>~1,000 templates (10 macrophenomena × 100), which the generator turns into ~10,000 generated sentences. Subphenomena are optional, at most 3 per macro: none → 100; 2 → 50 each; 3 → at least 33 each.</>],
-  ['What is the difference between a slot pattern and a template?', <>The slot pattern is the structure the lead designs (slot labels, which slot carries the contrast, constraints). A template is one row of alternatives written under it.</>],
-  ['Do leads\' own templates count?', <>Yes, provided they meet the same quality criteria.</>],
-  ['One slot pattern for all genders and numbers, or one per configuration?', <>Both are fine. With one general slot pattern, each row must be internally consistent for gender, number and so on. Choose what fits the grammar.</>],
-  ['Can a contributor add a new structure?', <>No. Contributors write templates under the lead's slot pattern. An idea for a new structure goes to the lead, who decides.</>],
-  ['How many alternatives per slot?', <>3–4 in every varying slot, including the ✓ / ✗ slot. Every alternative must make sense with every other alternative in its row, because the generator combines them.</>],
-  ['Why avoid reusing the same word?', <>Repeated vocabulary (the French pilot leaned on <i>fatiguée</i>) tires native-speaker reviewers. Vary your words across templates. The sheet check lists the most repeated words, and generator output is deduplicated and filtered before review.</>],
-  ['Can I use AI tools?', <>No AI-generated templates, words or sentences, ever. No copied sentences, offensive content or real people either.</>],
-  ['Is the 11 Dec deadline moving?', <>No. 11 Dec stays the project target, with full datasets for every language. Paper draft 18 Dec; ACL submission 4 Jan 2027.</>],
-  ['How are contributors paid and credited?', <>Paid batches of 25 templates at £15.50, for paid languages only, in vouchers via the department. One batch or more: acknowledged by name. Co-authorship: about 300 templates agreed in advance, plus an OpenReview account before 11 Dec. Paid contributors cannot be authors.</>],
-  ['Do I need a consent form? Can I be paid from my country?', <>These details are still being confirmed. Your language lead will tell you what applies to you, and the answer will be announced in <span className="mono">#cls-xblimps</span>.</>],
-  ['Where do I ask questions?', <>Your language lead first. Methodological questions are settled together in the Wednesday session and in <span className="mono">#cls-xblimps</span>. Sessions are on <a href={MEET_URL} target="_blank" rel="noreferrer">Google Meet</a>; times are on the <a href="#/guide">guide overview</a>.</>],
-]
-
-export function Faq() {
+// ---------------------------------------------------------------- handover checklists (Lead + Native)
+export function HandoverPacket() {
   return (
-    <div className="prose">
-      <div className="eyebrow-s">FAQ</div>
-      <h1>Frequently asked questions</h1>
-      <dl className="faq">
-        {FAQ.map(([q, a]) => (
-          <div key={q}><dt>{q}</dt><dd>{a}</dd></div>
-        ))}
-      </dl>
-    </div>
+    <ul>
+      <li>☐ The validated slot pattern: header row with plain slot labels and the ✓ / ✗ slots.</li>
+      <li>☐ Completion instructions: what to vary, what stays constant, how to fill the slots.</li>
+      <li>☐ A worked example: three templates of the slot pattern, identical columns.</li>
+      <li>☐ Which slot patterns this contributor is assigned, and how many templates.</li>
+      <li>☐ Where to write (which sheet and tab) and the reminder to put their name next to their templates.</li>
+      <li>☐ How to flag problems, and the date the templates are due.</li>
+      <li>☐ For paid languages: whether any paperwork is needed before they start.</li>
+    </ul>
   )
 }
 
-// ---------------------------------------------------------------- full workflow demo
+export function ContributorReturn() {
+  return (
+    <ul>
+      <li>☐ Templates under the assigned slot patterns, 3–4 alternatives in every varying slot, structure and ✓ / ✗ contrast unchanged.</li>
+      <li>☐ Every generated pair read for naturalness (the <a href="#/">generator</a> lists them).</li>
+      <li>☐ Varied vocabulary across templates.</li>
+      <li>☐ Flags for anything confusing, unnatural or impossible, with the row and a one-line reason.</li>
+      <li>☐ Name next to each template.</li>
+    </ul>
+  )
+}
+
+export function ClosingLoop() {
+  return (
+    <ol className="steps">
+      <li>Resolve the flags: fix the slot pattern if it is the problem, or explain how to fill it.</li>
+      <li>Review a sample of templates for consistency (not every routine row), and run the <a href="#/">sheet check</a> on the tab.</li>
+      <li>Record contributors and batches in the project's contributor spreadsheet.</li>
+      <li>Final linguistic validation before 11 Dec.</li>
+    </ol>
+  )
+}
+
+// ---------------------------------------------------------------- Worked Demo
+// An end-to-end walk-through computed live from the human-written English reference template
+// (src/lib/lexgen.ts DEMO_TEMPLATE_TEXT), with the same code the generator page runs.
 export function Demo() {
   const t = useMemo(() => demoTemplate(), [])
   const a = useMemo(() => analyse(t), [t])
-  const first = useMemo(() => { const out = []; for (const p of expand(t)) { out.push(p); if (out.length >= 6) break } return out }, [t])
+  const all = useMemo(() => Array.from(expand(t, DEFAULT_OPTIONS, a)), [t, a])
+  const unique = useMemo(() => dedupePairs(all), [all])
+  const first = all.slice(0, 8)
   const alts = t.columns.map((c, ci) => ({ c, v: splitAlternatives(t.rows[0][ci], c.role) }))
+  const shared = alts.filter(({ c }) => c.role === 'shared')
+  const good = alts.find(({ c }) => c.role === 'good')
+  const bad = alts.find(({ c }) => c.role === 'bad')
+  const nPairs = Math.min(good?.v.length ?? 0, bad?.v.length ?? 0)
+  const formula = [...shared.map(({ v }) => String(v.length)), `${nPairs} ✓/✗ pairs`].join(' × ')
+  const ex = all[0]
+  const roleCls = (r: string) => (r === 'good' ? 'good' : r === 'bad' ? 'bad' : '')
+  const roleMark = (r: string) => (r === 'good' ? ' ✓' : r === 'bad' ? ' ✗' : '')
+
   return (
     <div className="prose" style={{ maxWidth: 900 }}>
-      <div className="eyebrow-s">Worked demonstration</div>
-      <h1>The whole workflow, start to finish</h1>
-      <p className="lede">One English slot pattern (BLiMP <span className="mono">distractor_agree_rc</span>: subject–verb agreement across a relative clause with a plural “distractor” noun), followed from the lead's design to the generated pairs.</p>
+      <div className="eyebrow-s">Worked Demo</div>
+      <h1>What happens to a template, step by step</h1>
+      <p className="lede">
+        One slot pattern followed from the lead's design, through one template, through the generator, to the minimal pairs a native speaker checks.
+        The example is the human-written English reference row for BLiMP <span className="mono">distractor_agree_rc</span> (subject–verb agreement
+        across a relative clause with a plural “distractor” noun). Every number on this page is computed live by the same code as
+        the <a href="#/">generator</a>. The steps are identical in every project language; only the words change.
+      </p>
 
       <h2>Step 1 · The lead designs the slot pattern</h2>
       <p>The lead identifies the phenomenon (the verb agrees with the singular subject, not with the nearer plural object), fixes the structure
-        (singular subject + relative clause containing a plural object + main verb phrase) and exposes the slots:</p>
+        (singular subject + relative clause containing a plural object + main verb phrase) and names the slots. The header row is the <b>slot pattern</b>:</p>
       <div className="t-wrap"><table className="t"><thead><tr>{PROMPT_HEAD.map((h, i) => <th key={h} className={`mono ${i === 4 ? 'good' : i === 5 ? 'bad' : ''}`}>{h}</th>)}</tr></thead></table></div>
-      <p>The completion instructions say: <i>vary</i> the singular subject, the verb and the plural object, and the main verb phrase; <i>keep</i> the singular subject, the relative clause and the plural object between subject and verb; <i>write</i> the ✗ by changing only the agreement on the main verb.</p>
+      <ul>
+        <li><b>Ordinary slots</b> (<span className="mono">{shared.map(({ c }) => c.label).join(' ')}</span>) are shared: the ✓ and the ✗ sentence use the same words there.</li>
+        <li><b>One slot carries the contrast.</b> <span className="mono">{good?.c.label}</span> is the ✓ (grammatical) version and <span className="mono">{bad?.c.label}</span>, starred, is its ✗ partner. They differ only in agreement.</li>
+      </ul>
+      <p>The completion instructions say: <i>vary</i> the singular subject, the verb, the plural object and the main verb phrase; <i>keep</i> the singular subject,
+        the relative clause and the plural object between subject and verb; <i>write</i> the ✗ by changing only the agreement on the main verb.</p>
 
-      <h2>Step 2 · A first sentence</h2>
-      <p>One filler per slot:</p>
-      <div className="t-wrap"><table className="t"><tbody><tr>
-        <td>The refrigerator</td><td>that</td><td>stores</td><td>all the cakes</td><td className="good">runs too cold.</td><td className="bad">*run too cold.</td>
-      </tr></tbody></table></div>
-
-      <h2>Step 3 · Alternatives in every slot: one template</h2>
-      <p>The writer explores what else could naturally go in each slot, keeping every option compatible with every other. This row is one template:</p>
+      <h2>Step 2 · A contributor writes one template</h2>
+      <p>A <b>template</b> is one row under the slot pattern with several alternatives in every varying slot (the rule is 3–4). Every alternative must make sense
+        with every alternative in the other slots, because the generator will combine them all. This is the reference row, one template:</p>
       <div className="t-wrap"><table className="t">
-        <thead><tr><th>Slot</th><th>Alternatives</th><th>Count</th></tr></thead>
+        <thead><tr><th>Slot</th><th>Alternatives in this template</th><th>Count</th></tr></thead>
         <tbody>{alts.map(({ c, v }) => (
-          <tr key={c.label}><td className={`mono ${c.role === 'good' ? 'good' : c.role === 'bad' ? 'bad' : ''}`}>{c.label} {c.role === 'good' ? '✓' : c.role === 'bad' ? '✗' : ''}</td><td>{v.join(' · ')}</td><td>{v.length}</td></tr>
+          <tr key={c.label}><td className={`mono ${roleCls(c.role)}`}>{c.label}{roleMark(c.role)}</td><td>{v.join(' · ')}</td><td>{v.length}</td></tr>
         ))}</tbody>
       </table></div>
+      <p>In the sheet it is written as one row, alternatives in brackets and separated by commas:</p>
       <PromptTemplateTable />
+      <p className="muted" style={{ fontSize: 14 }}>The ✓ and ✗ alternatives are matched by position: the 1st ✓ goes with the 1st ✗, the 2nd with the 2nd. The relativiser has a single option (<i>that</i>), so it is the same in every sentence.</p>
 
-      <h2>Step 4 · Generated sentences</h2>
-      <p>The <a href="#/">lexical generator</a> combines them: 3 subjects × 1 relativiser × 3 verbs × 3 objects × 2 ✓/✗ endings = <b>{a.total} minimal pairs</b>, still one template. The first few:</p>
-      <div className="t-wrap"><table className="t">
-        <thead><tr><th>#</th><th className="good">✓</th><th className="bad">✗</th></tr></thead>
-        <tbody>{first.map((p) => <tr key={p.index}><td className="faint">{p.index}</td><td>{p.good}</td><td className="pair-bad">{p.bad}</td></tr>)}</tbody>
-      </table></div>
-      <p><a className="btn" href="#/">Open this template in the generator →</a></p>
+      <h2>Step 3 · How the generator combines them</h2>
+      <p>The generator takes <b>one alternative from every slot</b>, in every possible combination, and builds a ✓ sentence and its ✗ partner from the same choices.
+        It does not write or change any word: it only joins what is in the row.</p>
+      {ex && (
+        <div className="t-wrap"><table className="t">
+          <thead><tr>{t.columns.map((c, i) => <th key={i} className={`mono ${roleCls(c.role)}`}>{c.label}{roleMark(c.role)}</th>)}</tr></thead>
+          <tbody><tr>{ex.fillers.map((f, i) => <td key={i} className={roleCls(t.columns[i].role)}>{f}</td>)}</tr></tbody>
+        </table></div>
+      )}
+      {ex && (
+        <ul>
+          <li>✓ <b>{ex.good}</b> (the shared slots + the ✓ slot)</li>
+          <li>✗ <b className="pair-bad">{ex.bad}</b> (the same shared slots + the matching ✗ slot)</li>
+        </ul>
+      )}
+      <p>The slots are joined with a space, the first letter is capitalised and a full stop is added (for scripts written without spaces, set “Join slots with” to
+        “nothing”). The number of pairs is the product of the counts: <b>{formula} = {a.total} minimal pairs</b>, from one template.</p>
 
-      <h2>Step 5 · Check and hand back</h2>
+      <h2>Step 4 · Repeats removed, then filtered</h2>
       <ul>
-        <li>The writer reads every pair: “the display case that holds the baked goods randomly shuts off” must be as natural as the first. Anything that is not gets removed or moved to its own row.</li>
-        <li>Problems with the slot pattern itself are flagged to the lead.</li>
-        <li>The lead reviews the flags and a sample, then validates.</li>
+        <li><b>Deduplication.</b> Pairs with the same ✓ and ✗ sentence are removed before you read or download anything, so nobody reviews the same pair twice.
+          Here: {a.total} generated, {unique.removed} repeated, <b>{unique.pairs.length} unique</b>. Repeats appear when an alternative is listed twice or two rows overlap.</li>
+        <li><b>Size check.</b> More than {WARN_PER_ROW} pairs from one row is flagged: it usually means some alternatives do not combine naturally, and nobody can read that many.</li>
+        <li><b>Filtering before review.</b> Generated pairs are deduplicated and filtered centrally before native-speaker review. The target of ~10 generated
+          sentences per template is an <b>average after filtering, not a maximum</b>: this template produces {a.total} before filtering.</li>
       </ul>
 
-      <h2>The result: three templates of one slot pattern</h2>
+      <h2>Step 5 · The resulting minimal pairs</h2>
+      <p>Each line is one minimal pair: the two sentences are identical except in the contrast slot. The first {first.length} of {unique.pairs.length}:</p>
+      <div className="t-wrap"><table className="t">
+        <thead><tr><th>#</th><th className="good">✓ grammatical</th><th className="bad">✗ ungrammatical</th></tr></thead>
+        <tbody>{first.map((p) => <tr key={p.index}><td className="faint">{p.index}</td><td>{p.good}</td><td className="pair-bad">{p.bad}</td></tr>)}</tbody>
+      </table></div>
+      <p className="muted" style={{ fontSize: 14 }}>The downloaded CSV / TSV has one row per pair: the ✓ sentence, the ✗ sentence, the template it came from and the filler used in every slot, ready to paste back into the sheet.</p>
+
+      <h2>Step 6 · Checking them</h2>
+      <ol className="steps">
+        <li><b>Read every pair.</b> “The display case that holds the baked goods randomly shuts off” must be as natural as “The refrigerator that stores all the cakes runs too cold”.</li>
+        <li><b>The ✗ is wrong for one reason only:</b> agreement. Not tense, not word choice.</li>
+        <li><b>If one combination fails,</b> remove that alternative, or move it to its own row. Do not change the structure.</li>
+        <li><b>If the slot pattern itself does not work in your language,</b> flag it to your lead, who decides.</li>
+        <li><b>The lead reviews</b> the flags and a sample of templates, then validates.</li>
+      </ol>
+
+      <h2>Step 7 · More templates under the same slot pattern</h2>
+      <p>The next templates find their own subjects, verbs and objects (the third uses <i>who</i> because its subject is a person). Each row is one more template toward the target:</p>
       <WorkedTable />
+
+      <h2>Try it yourself</h2>
+      <p>Load this template into the generator, change an alternative and watch the count and the pairs update. For your own language, paste your lead's header row and your template rows instead.</p>
+      <p><button className="btn btn-primary" onClick={() => loadIntoGenerator(demoTemplate())}>Open this template in the generator 🪄</button></p>
     </div>
   )
 }
 
-// ---------------------------------------------------------------- heuristics, mistakes, troubleshooting
+// ---------------------------------------------------------------- Advice
 const MISTAKES: [string, string][] = [
   ['Changing the structure (new word order, an extra clause, a different case)', 'Keep the slot pattern; vary only the slot content. If the structure does not work in your language, flag it to your lead.'],
   ['The ✗ sentence is wrong for two reasons (agreement and tense, say)', 'Change only the phenomenon in the ✗ slot; everything else is identical to the ✓.'],
@@ -341,11 +370,38 @@ const MISTAKES: [string, string][] = [
   ['Real people\'s names or details, offensive content, stereotypes', 'Use ordinary, neutral content.'],
 ]
 
-export function Help() {
+const FAQ: [string, React.ReactNode][] = [
+  ['What counts toward the target?', <>Templates. A template is one row under a slot pattern, with 3–4 human-written alternatives in every varying slot, including the ✓ / ✗ contrast slot.</>],
+  ['What was a "seed sentence"?', <>The same thing: a template (previously called a seed sentence). The site and the guidelines now say "template" only.</>],
+  ['Do the generated sentences count?', <>No. 3 subjects × 3 verbs × 3 prepositions is 27 realisations, and it is still one template.</>],
+  ['How many templates per language?', <>~1,000 templates (10 macrophenomena × 100), which the generator turns into ~10,000 generated sentences (about 10 per template on average after filtering; not a maximum). Subphenomena are optional, at most 3 per macro: none → 100; 2 → 50 each; 3 → at least 33 each.</>],
+  ['What is the difference between a slot pattern and a template?', <>The slot pattern is the structure the lead designs (slot labels, which slot carries the contrast, constraints). A template is one row of alternatives written under it.</>],
+  ['Do leads\' own templates count?', <>Yes, provided they meet the same quality criteria.</>],
+  ['One slot pattern for all genders and numbers, or one per configuration?', <>Both are fine. With one general slot pattern, each row must be internally consistent for gender, number and so on. Choose what fits the grammar.</>],
+  ['Can a contributor add a new structure?', <>No. Contributors write templates under the lead's slot pattern. An idea for a new structure goes to the lead, who decides.</>],
+  ['How many alternatives per slot?', <>3–4 in every varying slot, including the ✓ / ✗ slot. Every alternative must make sense with every other alternative in its row, because the generator combines them.</>],
+  ['Does the generator work for my language?', <>Yes, for all nine project languages. It only recombines what you write, so it needs no language data. Persian lists can use <b>،</b> as the separator; for scripts written without spaces, set “Join slots with” to “nothing”.</>],
+  ['Why avoid reusing the same word?', <>Repeated vocabulary (the French pilot leaned on <i>fatiguée</i>) tires native-speaker reviewers. Vary your words across templates. The sheet check lists the most repeated words, and generator output is deduplicated and filtered before review.</>],
+  ['Can I use AI tools?', <>No AI-generated templates, words or sentences, ever. No copied sentences, offensive content or real people either.</>],
+  ['Is the 11 Dec deadline moving?', <>No. 11 Dec stays the project target, with full datasets for every language. Paper draft 18 Dec; ACL submission 4 Jan 2027.</>],
+  ['How are contributors paid and credited?', <>Paid batches of 25 templates at £15.50, for paid languages only, in vouchers via the department. One batch or more: acknowledged by name. Co-authorship: about 300 templates agreed in advance, plus an OpenReview account before 11 Dec. Paid contributors cannot be authors.</>],
+  ['Do I need a consent form? Can I be paid from my country?', <>These details are still being confirmed. Your language lead will tell you what applies to you, and the answer will be announced in <span className="mono">#cls-xblimps</span>.</>],
+  ['Where do I ask questions?', <>Your language lead first. Methodological questions are settled together in the Wednesday session and in <span className="mono">#cls-xblimps</span>. Sessions are on <a href={MEET_URL} target="_blank" rel="noreferrer">Google Meet</a>; times (UK time) are on the <a href="#/guide">Instructions</a> page.</>],
+]
+
+export function Advice() {
   return (
     <div className="prose" style={{ maxWidth: 900 }}>
-      <div className="eyebrow-s">Heuristics · mistakes · troubleshooting</div>
-      <h1>Getting it right</h1>
+      <div className="eyebrow-s">Advice</div>
+      <h1>Writing good templates</h1>
+      <p className="lede">The writing rules, how to keep vocabulary varied, the mistakes we see most, what to do with unclear cases, who to ask, and the FAQ.</p>
+      <Principle />
+
+      <h2>Writing rules</h2>
+      <TemplateRules />
+
+      <h2>Lexical variety</h2>
+      <LexicalVariety />
 
       <h2>Heuristics</h2>
       <ul>
@@ -361,6 +417,15 @@ export function Help() {
         <thead><tr><th>Mistake</th><th>What to do instead</th></tr></thead>
         <tbody>{MISTAKES.map(([m, f]) => <tr key={m}><td>{m}</td><td>{f}</td></tr>)}</tbody>
       </table></div>
+
+      <h2>Ambiguous cases</h2>
+      <ul>
+        <li><b>I am not sure the ✗ is ungrammatical, or only odd.</b> Flag it; the lead decides.</li>
+        <li><b>Speakers disagree, or it depends on region or register.</b> Flag it with a note; do not choose a variety on your own.</li>
+        <li><b>The slot pattern is impossible in my language.</b> Flag it to your lead with the reason; do not rewrite it.</li>
+        <li><b>I can only think of one or two natural options for a slot.</b> Tell your lead; the slot pattern may need adjusting.</li>
+        <li><b>I keep reaching for the same words.</b> Change the people, objects or situation of the next template, and check the repeated-words list in the sheet check.</li>
+      </ul>
 
       <h2>Troubleshooting the generator</h2>
       <div className="t-wrap"><table className="t">
@@ -380,56 +445,20 @@ export function Help() {
         </tbody>
       </table></div>
 
-      <h2>Troubleshooting the task</h2>
-      <ul>
-        <li><b>The slot pattern is impossible in my language.</b> Flag it to your lead with the reason; do not rewrite it.</li>
-        <li><b>I can only think of one or two natural options for a slot.</b> Tell your lead; the slot pattern may need adjusting.</li>
-        <li><b>I keep reaching for the same words.</b> Change the people, objects or situation of the next template, and check the repeated-words list in the sheet check.</li>
-        <li><b>I am not sure the ✗ is ungrammatical, or only odd.</b> Flag it; the lead decides.</li>
-      </ul>
-    </div>
-  )
-}
-
-// ---------------------------------------------------------------- handover
-export function Handover() {
-  return (
-    <div className="prose">
-      <div className="eyebrow-s">Handover</div>
-      <h1>Handover between leads and contributors</h1>
-      <p className="lede">A good packet means contributors can start without questions; a good return means leads only review what needs judgement.</p>
-
-      <h2>Lead → contributor: the packet</h2>
-      <ul>
-        <li>☐ The validated slot pattern: header row with plain slot labels and the ✓ / ✗ slots.</li>
-        <li>☐ Completion instructions: what to vary, what stays constant, how to fill the slots.</li>
-        <li>☐ A worked example: three templates of the slot pattern, identical columns.</li>
-        <li>☐ Which slot patterns this contributor is assigned, and how many templates.</li>
-        <li>☐ Where to write (which sheet and tab) and the reminder to put their name next to their templates.</li>
-        <li>☐ How to flag problems, and the date the templates are due.</li>
-        <li>☐ For paid languages: whether any paperwork is needed before they start.</li>
-      </ul>
-
-      <h2>Contributor → lead: the return</h2>
-      <ul>
-        <li>☐ Templates under the assigned slot patterns, 3–4 alternatives in every varying slot, structure and ✓ / ✗ contrast unchanged.</li>
-        <li>☐ Every generated pair read for naturalness (the generator lists them).</li>
-        <li>☐ Varied vocabulary across templates.</li>
-        <li>☐ Flags for anything confusing, unnatural or impossible, with the row and a one-line reason.</li>
-        <li>☐ Name next to each template.</li>
-      </ul>
-
-      <h2>Lead: closing the loop</h2>
-      <ol className="steps">
-        <li>Resolve the flags: fix the slot pattern if it is the problem, or explain how to fill it.</li>
-        <li>Review a sample of templates for consistency (not every routine row), and run the sheet check on the tab.</li>
-        <li>Record contributors and batches in the project's contributor spreadsheet.</li>
-        <li>Final linguistic validation before 11 Dec.</li>
-      </ol>
-
       <h2>Who to ask</h2>
-      <p>Contributors ask their language lead first. Leads bring open questions to the Wednesday session or <span className="mono">#cls-xblimps</span>.</p>
-      <DivisionTable />
+      <ul>
+        <li><b>Contributors:</b> your language lead first, for anything about your slot patterns, your sheet or your templates.</li>
+        <li><b>Leads:</b> bring open questions to the Wednesday session or <span className="mono">#cls-xblimps</span>, the single source of truth for decisions, rather than separate direct messages.</li>
+        <li>Session times (UK time) and the Meet link are on the <a href="#/guide">Instructions</a> page.</li>
+      </ul>
+
+      <h2>FAQ</h2>
+      <dl className="faq">
+        {FAQ.map(([q, a]) => (
+          <div key={q}><dt>{q}</dt><dd>{a}</dd></div>
+        ))}
+      </dl>
+      <GroundRules />
     </div>
   )
 }

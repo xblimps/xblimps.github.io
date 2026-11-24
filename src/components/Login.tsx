@@ -42,7 +42,7 @@ export default function Login() {
           <div className="spine-logo" style={{ margin: '0 auto 16px', width: 54, height: 54, fontSize: 24, borderRadius: 16 }}>x</div>
           <h1 style={{ margin: 0, fontSize: 26, letterSpacing: '-0.02em' }}>xBLiMPs</h1>
           <p className="muted" style={{ marginTop: 6 }}>Multilingual grammatical test-suite platform</p>
-          <p style={{ marginTop: 10, fontSize: 13.5 }}><a href="#/">← Lexical generator &amp; instructions</a> (no sign-in needed)</p>
+          <p style={{ marginTop: 10, fontSize: 13.5 }}><a href="#/">← Lexical generator &amp; instructions</a> (no sign-in needed; this sign-in is for the site admin)</p>
         </div>
 
         <div className="card" style={{ padding: 24 }}>
@@ -107,7 +107,8 @@ export default function Login() {
             </>
           )}
         </div>
-        <div style={{ marginTop: 18 }}>
+        {/* demo logins are a local-development aid only: on the deployed site the platform is admin-only */}
+        {!isCloud && <div style={{ marginTop: 18 }}>
           <div className="row" style={{ alignItems: 'center', gap: 10, marginBottom: 10 }}>
             <div style={{ flex: 1, height: 1, background: 'var(--hair)' }} />
             <span className="faint" style={{ fontSize: 11.5, textTransform: 'uppercase', letterSpacing: '.08em' }}>or try a demo login</span>
@@ -123,7 +124,7 @@ export default function Login() {
             ))}
           </div>
           <p className="faint" style={{ fontSize: 11, textAlign: 'center', marginTop: 10 }}>Demo logins use seeded sample data on this device only — no account or backend.</p>
-        </div>
+        </div>}
 
         <p className="faint" style={{ fontSize: 12, textAlign: 'center', marginTop: 18 }}>University of Cambridge · language technologies for under-studied languages</p>
       </div>

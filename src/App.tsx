@@ -17,6 +17,26 @@ import Login from './components/Login'
 import { isAdmin } from './lib/auth'
 
 const SYNC_LABEL: Record<SyncState, string> = { synced: 'All changes saved', syncing: 'Saving…', offline: 'Offline — queued' }
+function PublicOnly({ name, onSignOut }: { name: string; onSignOut: () => void }) {
+  return (
+    <div className="app" style={{ gridTemplateColumns: '64px 1fr' }}>
+      <div className="spine">
+        <div className="spine-logo">x</div>
+        <a className="spine-btn" title="Lexical generator" href="#/" style={{ textDecoration: 'none', display: 'grid', placeItems: 'center' }}>🪄</a>
+      </div>
+      <div className="main">
+        <div className="empty" style={{ maxWidth: 520, margin: '12vh auto', textAlign: 'center' }}>
+          <div className="big">🪄</div>
+          <p>Signed in as <b>{name}</b>. xBLiMPs work now happens on the public site: the lexical generator, with the instructions,
+            the language-lead and native-speaker pages, a worked demo and advice.</p>
+          <p><a className="btn btn-primary" href="#/">Open the lexical generator</a></p>
+          <p><button className="btn btn-ghost btn-sm" onClick={onSignOut}>Sign out</button></p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 const SyncChip = ({ state }: { state: SyncState }) => <span className={`sync-chip sync-${state}`}><span className="pip" />{SYNC_LABEL[state]}</span>
 
 export default function App() {
@@ -25,9 +45,12 @@ export default function App() {
   if (boot === 'loading') return <div style={{ height: '100%', display: 'grid', placeItems: 'center', color: 'var(--ink-soft)' }}>Loading…</div>
   if (boot === 'signed_out') return <Login />
 
-  // admin-only modules (sole-admin tooling) — CHILDES annotation, the team/onboarding
-  // roster, and the sync ledger are not shown to leads, native speakers or reviewers.
+  // The annotation platform is admin-only (Suchir). Everyone else — leads, native speakers,
+  // reviewers — gets the public site (https://xblimps.github.io/): the only icon they see is the
+  // wand, which opens the lexical generator. This is the route guard for every module below
+  // (board, xBLiMPs workspaces, forge, bench, CHILDES, team, audit), not just hidden buttons.
   const admin = isAdmin(profile)
+  if (!admin) return <PublicOnly name={profile.name} onSignOut={signOutNow} />
   // native speakers get a stripped-down app: only their Forge workspace (cognitive relief —
   // none of the coordinator machinery). Everyone else keeps the full module switcher.
   const onlyForge = profile.role === 'native_speaker'

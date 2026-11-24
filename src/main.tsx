@@ -1,6 +1,6 @@
 import React, { Suspense, lazy, useEffect, useState } from 'react'
 import ReactDOM from 'react-dom/client'
-import Site, { SITE_ROUTES, type Route } from './site/Site'
+import Site, { SITE_ROUTES } from './site/Site'
 import './styles/theme.css'
 
 // After a redeploy an open tab may ask for an old chunk name; reload once to pick up the new build.
@@ -11,23 +11,24 @@ const AppShell = lazy(() => import('./AppShell').catch((e) => {
   throw e
 }))
 
-// Routing: the public site (lexical generator + instructions) is the default; the annotation
-// platform lives at #/app. Requests carrying the platform's own URL parameters (email sign-in
-// links, ?demo= / ?go= / ?lang= previews) still open the platform directly.
+// Routing: the public site (lexical generator + five guide pages) is the default and is all that
+// contributors see. The annotation platform lives at #/app and is admin-only: App.tsx shows its
+// modules only when isAdmin(profile). Requests carrying the platform's own URL parameters (email
+// sign-in links, ?demo= / ?go= / ?lang= local previews) still open the platform directly.
 const APP_PARAMS = ['oobCode', 'apiKey', 'demo', 'go', 'lang']
 const wantsApp = () => {
   const sp = new URLSearchParams(window.location.search)
   return APP_PARAMS.some((k) => sp.has(k))
 }
-const parse = (): Route | 'app' => {
+const parse = (): string => {
   const h = window.location.hash.replace(/^#\/?/, '').replace(/\/$/, '')
   if (h === 'app' || h.startsWith('app/')) return 'app'
-  if ((SITE_ROUTES as string[]).includes(h)) return h as Route
+  if (SITE_ROUTES.includes(h)) return h
   return ''
 }
 
 function Root() {
-  const [route, setRoute] = useState<Route | 'app'>(() => (wantsApp() ? 'app' : parse()))
+  const [route, setRoute] = useState<string>(() => (wantsApp() ? 'app' : parse()))
   useEffect(() => {
     const on = () => setRoute(parse())
     window.addEventListener('hashchange', on)

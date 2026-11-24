@@ -12,6 +12,7 @@ import {
 } from '../lib/lexgen'
 import { downloadText, copyText } from '../lib/download'
 import SheetImport from './SheetImport'
+import { LANGUAGES } from './guide/common'
 
 const PREVIEW_N = 200
 /** Count unique pairs live only up to this many generated pairs (beyond it, only at download). */
@@ -32,6 +33,11 @@ function load(): { t: LexTemplate; o: LexOptions } | null {
 function save(t: LexTemplate, o: LexOptions) {
   try { localStorage.setItem(STORE_KEY, JSON.stringify({ t, o })) } catch { /* ignore */ }
 }
+/** Open a template in the generator page (used by the Worked Demo's "try it" button). */
+export function loadIntoGenerator(t: LexTemplate, o: LexOptions = DEFAULT_OPTIONS) {
+  save(t, o)
+  window.location.hash = '#/'
+}
 
 const safeName = (s: string) => (s.trim() || 'slot_pattern').replace(/[^\w.-]+/g, '_')
 
@@ -46,8 +52,8 @@ function Pair({ p, goodCol, badCol }: { p: GeneratedPair; goodCol: number; badCo
   return (
     <tr>
       <td className="faint mono">{p.row}.{p.index}</td>
-      <td className="pair-good">{mark(p.good, p.fillers[goodCol])}</td>
-      <td className="pair-bad">{mark(p.bad, p.fillers[badCol])}</td>
+      <td className="pair-good" dir="auto">{mark(p.good, p.fillers[goodCol])}</td>
+      <td className="pair-bad" dir="auto">{mark(p.bad, p.fillers[badCol])}</td>
     </tr>
   )
 }
@@ -156,8 +162,18 @@ export default function Generator() {
           <div className="target-strip">
             <span><b>Template</b> = one sheet row, 3–4 alternatives in every varying slot. The unit that counts.</span>
             <span><b>Target</b>: ~1,000 templates per language (10 macrophenomena × 100) → ~10,000 generated sentences, by 11 Dec.</span>
-            <span>Generated sentences do not count. <a href="#/guide">Guide →</a></span>
+            <span>Generated sentences do not count. <a href="#/guide">Instructions →</a></span>
           </div>
+          <ol className="how-it-works" aria-label="What the generator does">
+            <li><b>Slot pattern.</b> The header row: one label per slot, one slot marked ✓ and its partner ✗.</li>
+            <li><b>Template.</b> Each row under it lists 3–4 alternatives per slot, written by a native speaker.</li>
+            <li><b>Combine.</b> Every combination of one alternative per slot gives a ✓ sentence and its ✗ partner, identical except in the contrast slot.</li>
+            <li><b>Deduplicate and check.</b> Repeats are removed; you read every pair, then download or copy them back into your sheet.</li>
+          </ol>
+          <p className="faint" style={{ fontSize: 13, margin: '6px 0 0' }}>
+            Step by step with a real example: <a href="#/guide/demo">Worked Demo</a>. Works for all project languages
+            ({LANGUAGES.join(', ')}): it needs no language data, only the words you write. Persian lists can use <b>،</b>; for scripts without spaces set “Join slots with” to “nothing”.
+          </p>
           <div className="no-ai">✓ No AI: every word comes from the alternatives people write. Same input, same output. Nothing leaves your browser.</div>
         </div>
       </div>
@@ -178,7 +194,7 @@ export default function Generator() {
           <p>Paste a whole tab: every slot pattern is found and checked, templates are counted against the targets, words repeated across templates are listed, and all pairs download at once.</p>
           <div className="entry-actions">
             <button className="btn btn-sm" onClick={openSheet}>Open the sheet check ↓</button>
-            <a className="btn btn-sm btn-ghost" href="#/guide/write">How to write a template</a>
+            <a className="btn btn-sm btn-ghost" href="#/guide/advice">How to write a template</a>
           </div>
         </div>
       </div>
@@ -209,7 +225,7 @@ export default function Generator() {
                 (<b>Segons la meva mare,, Em van dir que</b>), end a single alternative with it (<b>(partir,)</b>), or separate the
                 alternatives with <b>|</b> or <b>;</b> instead. Write <b>∅</b> for “leave empty”.
               </div>
-              <textarea className="paste" value={paste} onChange={(e) => setPaste(e.target.value)}
+              <textarea className="paste" dir="auto" value={paste} onChange={(e) => setPaste(e.target.value)}
                 placeholder={'{subj_sg}\t{rel}\t{V_trans}\t{obj_pl}\t{VP_sg} ✓\t*{VP_pl} ✗\n(the refrigerator, the freezer)\tthat\t(stores, holds)\t(all the cakes)\t(runs too cold)\t(run too cold)'} />
               <div style={{ marginTop: 8, display: 'flex', gap: 8 }}>
                 <button className="btn btn-primary btn-sm" onClick={importPaste} disabled={!paste.trim()}>Import (replaces the grid)</button>
@@ -248,7 +264,7 @@ export default function Generator() {
                       const n = splitAlternatives(r[ci] ?? '', c.role).length
                       return (
                         <td key={ci}>
-                          <textarea className="cell" value={r[ci] ?? ''} aria-label={`Row ${ri + 1}, ${c.label}`}
+                          <textarea className="cell" dir="auto" value={r[ci] ?? ''} aria-label={`Row ${ri + 1}, ${c.label}`}
                             placeholder="alternative, alternative, …" onChange={(e) => setCell(ri, ci, e.target.value)} />
                           <div className="cell-count">{n} alternative{n === 1 ? '' : 's'}</div>
                         </td>
@@ -351,7 +367,7 @@ export default function Generator() {
           <p style={{ marginBottom: 0 }}>
             Vary your words across templates, too: the sheet check lists words that recur in many templates. If one combination fails, remove that
             alternative or move it to its own row. If the slot pattern itself seems impossible in your language, <a href="#/guide/native">flag it</a> to
-            your language lead rather than changing it. More in <a href="#/guide/write">how to write a template</a> and <a href="#/guide/help">common mistakes</a>.
+            your language lead rather than changing it. More in <a href="#/guide/advice">Advice</a> (writing rules and common mistakes).
           </p>
         </div>
       </div>
