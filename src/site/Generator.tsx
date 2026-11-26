@@ -52,20 +52,25 @@ function Picker() {
   )
 }
 
-export function LanguageGrid({ to }: { to: string }) {
+export function Flag({ lang, size = 28 }: { lang: Language; size?: number }) {
+  return <img className="m-flag" src={`${import.meta.env.BASE_URL}flags/${lang.flag}.svg`} alt="" width={Math.round(size * 4 / 3)} height={size} loading="lazy" />
+}
+
+export function LanguageGrid({ to, add = true }: { to: string; add?: boolean }) {
   return (
     <div className="c-langs">
       {LANGUAGE_DATA.map((l) => (
         <a key={l.code} href={`#/${to}/${l.code}`} className="c-lang">
           <span className="m-recruit">Recruiting</span>
+          <Flag lang={l} />
           <b dir={l.dir} style={{ fontSize: 20 }}>{l.native}</b><span className="native">{l.name}{l.status === 'phase-2' ? ' · phase 2' : ''}</span>
           <div className="state">Open →</div>
         </a>
       ))}
-      <a className="c-lang m-add" href={mail('xBLiMPs: add my language')}>
+      {add && <a className="c-lang m-add" href={mail('xBLiMPs: add my language')}>
         <b style={{ fontSize: 28, lineHeight: 1 }}>+</b><span className="native">Add your language</span>
         <div className="state">Start it with us →</div>
-      </a>
+      </a>}
     </div>
   )
 }

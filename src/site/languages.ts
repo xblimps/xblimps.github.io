@@ -19,6 +19,7 @@ export interface Language {
   code: string             // ISO 639-1, also the file name of the inspiration pool (public/fineweb/<code>.json)
   name: string
   native: string           // the language's own name, as its speakers write it
+  flag: string             // public/flags/<flag>.svg (flag-icons, MIT): a visual cue only; a language is not a country
   script: 'Latin' | 'Arabic'
   dir?: 'rtl'
   status: LangStatus
@@ -29,17 +30,17 @@ export interface Language {
 }
 
 export const LANGUAGE_DATA: Language[] = [
-  { code: 'af', name: 'Afrikaans', native: 'Afrikaans', script: 'Latin', status: 'active', leads: null, channel: '#xblimps-afrikaans' },
-  { code: 'eu', name: 'Basque', native: 'Euskara', script: 'Latin', status: 'phase-2', leads: null,
+  { code: 'af', name: 'Afrikaans', native: 'Afrikaans', flag: 'za', script: 'Latin', status: 'active', leads: null, channel: '#xblimps-afrikaans' },
+  { code: 'eu', name: 'Basque', native: 'Euskara', flag: 'es-pv', script: 'Latin', status: 'phase-2', leads: null,
     notes: ['Basque joins in phase 2 of the project. If you would like to lead or contribute, get in touch with the central team.'] },
-  { code: 'ca', name: 'Catalan', native: 'Català', script: 'Latin', status: 'active', leads: null },
-  { code: 'en', name: 'English', native: 'English', script: 'Latin', status: 'active', leads: null },
-  { code: 'fr', name: 'French', native: 'Français', script: 'Latin', status: 'active', leads: null,
+  { code: 'ca', name: 'Catalan', native: 'Català', flag: 'es-ct', script: 'Latin', status: 'active', leads: null },
+  { code: 'en', name: 'English', native: 'English', flag: 'gb', script: 'Latin', status: 'active', leads: null },
+  { code: 'fr', name: 'French', native: 'Français', flag: 'fr', script: 'Latin', status: 'active', leads: null,
     notes: ['Do not type a full stop at the end of a sentence: the generator adds it to every ✓ / ✗ sentence.'] },
-  { code: 'fa', name: 'Persian', native: 'فارسی', script: 'Arabic', dir: 'rtl', status: 'active', leads: null },
-  { code: 'es', name: 'Spanish', native: 'Español', script: 'Latin', status: 'active', leads: null },
-  { code: 'tl', name: 'Tagalog', native: 'Tagalog', script: 'Latin', status: 'active', leads: null },
-  { code: 'cy', name: 'Welsh', native: 'Cymraeg', script: 'Latin', status: 'active', leads: null },
+  { code: 'fa', name: 'Persian', native: 'فارسی', flag: 'ir', script: 'Arabic', dir: 'rtl', status: 'active', leads: null },
+  { code: 'es', name: 'Spanish', native: 'Español', flag: 'es', script: 'Latin', status: 'active', leads: null },
+  { code: 'tl', name: 'Tagalog', native: 'Tagalog', flag: 'ph', script: 'Latin', status: 'active', leads: null },
+  { code: 'cy', name: 'Welsh', native: 'Cymraeg', flag: 'gb-wls', script: 'Latin', status: 'active', leads: null },
 ]
 
 export const byCode = (code: string) => LANGUAGE_DATA.find((l) => l.code === code)
