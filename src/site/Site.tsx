@@ -89,7 +89,7 @@ export default function Site({ route: raw }: { route: string }) {
 
       <footer className="site-foot">
         <div className="site-foot-inner">
-          <span>xBLiMPs · Cambridge · ACL 2027 dataset · Afrikaans, Catalan, English, French, Persian, Spanish, Tagalog, Welsh (Basque in phase 2)</span>
+          <span>xBLiMPs · Cambridge · built in phases · Afrikaans, Catalan, English, French, Persian, Spanish, Tagalog, Welsh (Basque in phase 2)</span>
           <span>No AI-generated templates, words or sentences. We give you words; you write the grammar.</span>
           <span>Vocabulary samples: FineWeb-2 / FineWeb (ODC-By 1.0), English machine translations by Helsinki-NLP opus-mt (Apache-2.0) and, for Persian, Meta NLLB-200 (CC-BY-NC 4.0). Design after the CAFe project site (developerFolio).</span>
         </div>

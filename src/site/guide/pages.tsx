@@ -76,6 +76,9 @@ export function Instructions() {
 }
 
 // ---------------------------------------------------------------- language leads
+/** The language lead deck (Google Slides, shared as anyone-with-the-link can view). */
+const LEAD_DECK_ID = '1iSMsZYW4L7YOGxHlQDf2gTFb8g9Hk24aLfm-juIMr-Y'
+
 export function Lead() {
   return (
     <div className="prose">
@@ -89,6 +92,13 @@ export function Lead() {
         <b>Your target:</b> ~1,000 templates for your language by <b>11 Dec</b>: 10 macrophenomena × 100 templates, with at most 3 subphenomena per macro
         (2 → 50 each; 3 → at least 33 each). Your own templates count, at the same quality bar.
       </div>
+
+      <h2>The language lead slides</h2>
+      <div className="slides-embed">
+        <iframe src={`https://docs.google.com/presentation/d/${LEAD_DECK_ID}/embed?start=false&loop=false&delayms=5000`}
+          title="xBLiMPs language lead presentation (Google Slides)" loading="lazy" allowFullScreen />
+      </div>
+      <p className="c-note"><a href={`https://docs.google.com/presentation/d/${LEAD_DECK_ID}/edit?usp=sharing`} target="_blank" rel="noreferrer">Open the slides in Google Slides</a> (full screen, speaker notes).</p>
 
       <h2>1. Linguistic analysis</h2>
       <ul>

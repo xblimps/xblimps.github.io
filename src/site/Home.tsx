@@ -8,7 +8,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { LANGUAGE_DATA, CENTRAL_CONTACT } from './languages'
 import { Sessions } from './guide/common'
-import { YouCanBe, LanguageGrid } from './Generator'
+import { LanguageGrid, Flag } from './Generator'
 
 // Real pairs: English = the guide's human-written reference row; the others are from the linguists' notes
 // (scripts/seed-data/<code>.json), with their English gloss and explanation.
@@ -101,24 +101,32 @@ const FAQ: [string, string][] = [
   ['My language is not listed.', `Add it! Email ${CENTRAL_CONTACT.email}. New languages join a later phase through a language lead and a native-speaker coordinator, and you can be either.`],
 ]
 
+const mailto = (subject: string) => `mailto:${CENTRAL_CONTACT.email}?subject=${encodeURIComponent(subject)}`
+
 export default function Home() {
-    return (
+  return (
     <div className="m">
-      {/* hero */}
-      <section className="m-hero" aria-labelledby="hello">
-        <div className="m-hero-inner">
-          <p className="m-eyebrow">Open research · University of Cambridge · Phase 1 · {LANGUAGE_DATA.length} languages and growing</p>
-          <h1 id="hello">Does AI really understand <span className="m-grad">your language?</span></h1>
-          <p className="m-sub">AI sounds fluent. But does it know the rules? Help us find out, with the people who know each language best: its native speakers.</p>
+      {/* hero: the CAFe greeting (welcoming, two columns, flags instead of a scrolling list of names) */}
+      <section className="c-hero m-welcome" aria-labelledby="hello">
+        <div>
+          <p className="m-eyebrow">Open research · University of Cambridge · Phase 1</p>
+          <h1 id="hello">Welcome to xBLiMPs! <span aria-hidden="true">👋</span></h1>
+          <p className="lead">Does AI really understand <b>your language</b>? We're building open grammar tests for AI, written by the people who know each
+            language best: its native speakers. Write a few sentences or hundreds; no linguistics degree needed, and you're credited by name.</p>
           <div className="c-btns">
-            <a className="c-btn m-big" href="#languages">Bring your language into xBLiMPs</a>
-            <a className="c-btn ghost m-big" href="#quiz">Take the 30-second test</a>
+            <a className="c-btn" href="#languages">Get involved</a>
+            <a className="c-btn ghost" href="#quiz">Take the 30-second test</a>
           </div>
-          <p className="m-trust">We're recruiting native speakers · Write a few sentences or hundreds · No linguistics degree needed · Credited by name</p>
         </div>
-        <div className="m-marquee" aria-label="Project languages">
-          <div className="m-track">
-            {[...LANGUAGE_DATA, ...LANGUAGE_DATA].map((l, k) => <span key={k} dir={l.dir}>{l.native}</span>)}
+        <div className="m-flags-card" aria-label="Project languages">
+          <p className="m-eyebrow" style={{ margin: '0 0 12px' }}>{LANGUAGE_DATA.length} languages and growing</p>
+          <div className="m-flags">
+            {LANGUAGE_DATA.map((l) => (
+              <a key={l.code} href={`#/generator/${l.code}`} title={l.name}>
+                <Flag lang={l} size={36} /><span dir={l.dir}>{l.native}</span>
+              </a>
+            ))}
+            <a href="#new-languages" className="m-flags-add"><b aria-hidden="true">+</b><span>Yours?</span></a>
           </div>
         </div>
       </section>
@@ -134,14 +142,10 @@ export default function Home() {
       {/* why */}
       <section className="c-section" aria-labelledby="why-h">
         <p className="m-eyebrow">Why it matters</p>
-        <h2 id="why-h">The future of AI shouldn't belong to English alone.</h2>
-        <div className="c-grid m-why">
-          <div className="c-card"><div className="m-ico" aria-hidden="true">🌍</div><h3>Most AI is tested in English</h3>
-            <p>A model that looks brilliant in English may stumble on the grammar of other languages. We need tests that are native to each language, not translated.</p></div>
-          <div className="c-card"><div className="m-ico" aria-hidden="true">🧠</div><h3>Fluency is not understanding</h3>
-            <p>Convincing text is not proof that a model knows the rules behind it. Minimal pairs isolate one rule at a time, so the answer is unambiguous.</p></div>
-          <div className="c-card"><div className="m-ico" aria-hidden="true">🗣️</div><h3>Native speakers know best</h3>
-            <p>What sounds right in your language can't be looked up or translated from English. Your judgement is the research contribution.</p></div>
+        <h2 id="why-h">Most AI is tested in English. We need to change that.</h2>
+        <div className="m-points">
+          <p><b>Fluency isn't understanding.</b> Our tests reveal whether AI actually knows the grammar behind a sentence.</p>
+          <p><b>Your language matters.</b> Native speakers bring knowledge that translation cannot replace. Your contribution helps make AI better for everyone.</p>
         </div>
       </section>
 
@@ -149,67 +153,65 @@ export default function Home() {
       <section className="c-section" id="how" aria-labelledby="how-h">
         <p className="m-eyebrow">How it works</p>
         <h2 id="how-h">We give you words. You write the grammar.</h2>
-        <div className="m-steps">
-          <div><span>1</span><h3>Pick your language</h3><p>Your language lead gives you a grammatical construction to work on, like subject–verb agreement.</p></div>
-          <div><span>2</span><h3>Grab some words</h3><p>The lexical generator shows you a real sentence from your language, with an English translation and words you can reuse.</p></div>
-          <div><span>3</span><h3>Write a test</h3><p>A correct sentence and a version that is wrong in exactly one way. Use the words, not the sentence.</p></div>
-          <div><span>4</span><h3>Make it count</h3><p>A few or hundreds: every test counts. Your lead reviews them, and they become part of an open benchmark.</p></div>
-        </div>
-        <div className="c-btns" style={{ marginTop: 22 }}><a className="c-btn" href="#/generator">Open the lexical generator</a></div>
+        <ol className="m-compact">
+          <li><b>Pick a language.</b> Choose a grammatical feature with your language lead.</li>
+          <li><b>Get your words.</b> Use our generator to find words from real sentences.</li>
+          <li><b>Write two sentences.</b> One correct, one with exactly one grammatical mistake.</li>
+          <li><b>Submit your tests.</b> Your work helps build an open benchmark for researchers worldwide.</li>
+        </ol>
+        <div className="c-btns" style={{ marginTop: 18 }}><a className="c-btn" href="#/generator">Start creating tests →</a></div>
       </section>
 
-      {/* what you get */}
-      <section className="c-section" aria-labelledby="get-h">
-        <p className="m-eyebrow">What you get</p>
-        <h2 id="get-h">You're not filling in a spreadsheet. You're joining a research project.</h2>
-        <div className="c-grid">
-          <div className="c-card"><h3>📄 Your name in the research</h3><p>Acknowledged by name in the paper and the open dataset (with your permission).</p></div>
-          <div className="c-card"><h3>✍️ A path to co-authorship</h3><p>Substantial contributions, agreed with the team in advance, can lead to co-authorship of the ACL 2027 paper.</p></div>
-          <div className="c-card"><h3>🎓 Real research experience</h3><p>Learn how linguistic theory becomes a controlled experiment, alongside Cambridge researchers.</p></div>
-          <div className="c-card"><h3>🧭 Lead your language</h3><p>Grow from contributor to reviewer, coordinator or language lead.</p></div>
+      {/* get involved + what you get */}
+      <section className="c-section" id="involved" aria-labelledby="involved-h">
+        <p className="m-eyebrow">Get involved</p>
+        <h2 id="involved-h">There's more than one way to contribute.</h2>
+        <div className="m-two">
+          <ul className="m-compact m-ways">
+            <li><b>Write tests.</b> Create a few sentences or hundreds using our <a href="#/generator">lexical generator</a>. <a href={mailto('xBLiMPs: I want to contribute')}>I want to contribute →</a></li>
+            <li><b>Join a language team.</b> Work with other speakers to build and review your language's collection. <a href={mailto('xBLiMPs: join a core team')}>Join a team →</a></li>
+            <li><b>Coordinate a community.</b> Bring speakers together and grow your language team. <a href={mailto('xBLiMPs: coordinator')}>Coordinate →</a></li>
+            <li><b>Lead a language.</b> Choose grammatical constructions, guide contributors and review tests. <a href={mailto('xBLiMPs: language lead')}>Lead →</a></li>
+          </ul>
+          <div className="m-get">
+            <h3>What you get</h3>
+            <ul className="m-compact">
+              <li><b>Research credit.</b> Named acknowledgement in the papers and the open dataset, with your permission.</li>
+              <li><b>A path to co-authorship.</b> We publish in batches of papers as languages are completed. Substantial contributions, agreed in advance, can earn co-authorship.</li>
+              <li><b>Research experience.</b> Work alongside Cambridge researchers and develop practical research skills.</li>
+              <li><b>Room to grow.</b> Progress from contributor to reviewer, coordinator or language lead.</li>
+            </ul>
+            <p className="c-note" style={{ margin: '10px 0 0' }}>Payment for paid languages and credit rules are in the <a href="#/guide/native">contributor guide</a>.</p>
+          </div>
         </div>
-        <p className="c-note" style={{ marginTop: 10 }}>Payment for paid languages and the exact credit rules are in the <a href="#/guide/native">contributor guide</a>.</p>
-      </section>
-
-      {/* who */}
-      <section className="c-section" aria-labelledby="who-h">
-        <p className="m-eyebrow">Who we need</p>
-        <h2 id="who-h">There's a place for you, whatever your background.</h2>
-        <div className="c-grid">
-          <div className="c-card"><span className="tag">Native speakers</span><h3>Your language deserves to be understood by AI.</h3><p>Write a few tests or join a core team.</p></div>
-          <div className="c-card"><span className="tag">Linguists</span><h3>Put linguistic theory to the test.</h3><p>Lead a language: choose the constructions and design the templates.</p></div>
-          <div className="c-card"><span className="tag">Students</span><h3>Turn your knowledge into research.</h3><p>A real contribution to AI research, with your name on it.</p></div>
-          <div className="c-card"><span className="tag">Community builders</span><h3>Bring your language community together.</h3><p>Become a native-speaker coordinator and grow your language's team.</p></div>
-        </div>
-      </section>
-
-      {/* people first */}
-      <section className="c-section" aria-labelledby="join-h">
-        <p className="m-eyebrow">What can you do?</p>
-        <h2 id="join-h">You can be part of xBLiMPs, in whatever way suits you.</h2>
-        <YouCanBe />
-        <div className="m-newlang">
-          <div><h3>🌱 You can start a new language</h3>
-            <p>Is your language missing? Become its first lead or coordinator, and we'll help you bring it into the next phase of xBLiMPs.</p></div>
-          <a className="c-btn" href={`mailto:${CENTRAL_CONTACT.email}?subject=${encodeURIComponent('xBLiMPs: add my language')}`}>Add your language</a>
-        </div>
+        <div className="c-btns" style={{ marginTop: 20 }}><a className="c-btn" href="#languages">Find your way into xBLiMPs →</a></div>
       </section>
 
       {/* phases */}
       <section className="m-band" aria-labelledby="phases-h">
         <div>
           <h2 id="phases-h">Built in phases, language by language, towards 182 BLiMPs.</h2>
-          <p>Phase 1 covers the languages below and the first xBLiMPs paper. Every phase adds new languages and new grammatical tests, so there is always room for yours.</p>
+          <p>Every phase adds new languages and new grammatical tests, so there is always room for yours.</p>
         </div>
-        <a className="c-btn m-big m-light" href="#languages">Join a language</a>
       </section>
 
-      {/* languages */}
+      {/* languages: ongoing projects vs new languages */}
       <section className="c-section" id="languages" aria-labelledby="langs-h">
-        <p className="m-eyebrow">We're recruiting native speakers</p>
-        <h2 id="langs-h">Choose your language</h2>
-        <p className="m-lede">Whether you can write a few sentences or hundreds, we need you. The more speakers per language, the richer the tests.</p>
-        <LanguageGrid to="generator" />
+        <p className="m-eyebrow">Join our ongoing projects</p>
+        <h2 id="langs-h">Write tests in a language we're already building.</h2>
+        <p className="m-lede">We're recruiting native speakers for every language below. A few sentences or hundreds: every test counts.</p>
+        <LanguageGrid to="generator" add={false} />
+      </section>
+
+      <section className="c-section" id="new-languages" aria-labelledby="new-h">
+        <div className="m-newlang">
+          <div>
+            <p className="m-eyebrow" style={{ margin: '0 0 6px' }}>Start a new language</p>
+            <h3 id="new-h">We're recruiting language leads for Korean, Arabic and many more.</h3>
+            <p>Linguists and native speakers: bring a new language into the next phase of xBLiMPs as its lead or coordinator. We'll help you set it up.</p>
+          </div>
+          <a className="c-btn" href={mailto('xBLiMPs: add my language')}>Start a new language</a>
+        </div>
       </section>
 
       {/* faq */}
