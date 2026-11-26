@@ -1,49 +1,51 @@
 // Public shell of https://xblimps.github.io/ (the canonical xBLiMPs site), in the CAFe theme (cafe.css).
-// Home (#/) is the language picker; each language has a contribution page (#/lang/<code>) with inspiration
-// sentences, the template editor, checks and save/export. The lexical generator with the sheet check moved to
-// #/generator; the five guide pages are unchanged. No sign-in, no backend. Older routes are kept as aliases so
-// links already shared still work. The annotation platform (#/app) is admin-only and is not linked from here.
+// Home (#/) is the marketing and recruitment page. The lexical generator (#/generator, #/generator/<code>) gives a
+// random real sentence per language, with an English translation and words to reuse; that is all the public site does
+// for contributors (template writing is private, in the language sheets). Four guide pages follow. No sign-in, no
+// backend. Older routes (#/contribute, #/lang/<code>, #/check, #/guide/demo …) resolve to their replacements. The
+// annotation platform (#/app) is admin-only and is not linked from here.
 
 import React, { useEffect, useState } from 'react'
-import Generator from './Generator'
 import Home from './Home'
-import LanguagePage from './LanguagePage'
-import { Instructions, Lead, Native, Demo, Advice } from './guide/pages'
+import Generator from './Generator'
+import { Instructions, Lead, Native, Advice } from './guide/pages'
 import { byCode } from './languages'
 import './site.css'
 import './cafe.css'
 
-export type Page = '' | 'generator' | 'guide' | 'guide/lead' | 'guide/native' | 'guide/demo' | 'guide/advice'
+export type Page = '' | 'generator' | 'guide' | 'guide/lead' | 'guide/native' | 'guide/advice'
 // Older routes (shared in Slack and docs) resolve to the page that now holds their content.
 const ALIASES: Record<string, Page> = {
   'guide/write': 'guide/advice', 'guide/faq': 'guide/advice', 'guide/help': 'guide/advice',
-  'guide/handover': 'guide/lead', 'guide/instructions': 'guide', 'check': 'generator', 'wand': 'generator',
+  'guide/handover': 'guide/lead', 'guide/instructions': 'guide', 'guide/demo': 'guide/native',
+  // the old slot generator's aliases and the short-lived Contribute page open the lexical generator
+  contribute: 'generator', check: 'generator', wand: 'generator',
 }
 export type Route = Page
-export const SITE_ROUTES: string[] = ['', 'generator', 'guide', 'guide/lead', 'guide/native', 'guide/demo', 'guide/advice', ...Object.keys(ALIASES)]
-export const isSiteRoute = (h: string) => SITE_ROUTES.includes(h) || (h.startsWith('lang/') && !!byCode(h.slice(5)))
+export const SITE_ROUTES: string[] = ['', 'generator', 'guide', 'guide/lead', 'guide/native', 'guide/advice', ...Object.keys(ALIASES)]
+const langOf = (h: string) => { const m = h.match(/^(?:generator|contribute|lang)\/([a-z]{2})$/); return m ? m[1] : null }
+export const isSiteRoute = (h: string) => SITE_ROUTES.includes(h) || (!!langOf(h) && !!byCode(langOf(h)!))
 export const resolveRoute = (r: string): Page => (ALIASES[r] ?? (r as Page))
 
 const NAV: [string, string][] = [
-  ['', 'Languages'],
-  ['generator', '🪄 Generator'],
+  ['', 'Home'],
+  ['generator', 'Lexical generator'],
   ['guide', 'Instructions'],
   ['guide/lead', "I'm a Language Lead"],
   ['guide/native', "I'm a Native Speaker"],
-  ['guide/demo', 'Worked Demo'],
   ['guide/advice', 'Advice'],
 ]
 
 const TITLES: Record<Page, string> = {
-  '': 'Contribute to xBLiMPs', generator: 'Lexical generator', guide: 'Instructions', 'guide/lead': "I'm a Language Lead",
-  'guide/native': "I'm a Native Speaker", 'guide/demo': 'Worked Demo', 'guide/advice': 'Advice',
+  '': 'Does AI really understand your language?', generator: 'Lexical generator', guide: 'Instructions', 'guide/lead': "I'm a Language Lead",
+  'guide/native': "I'm a Native Speaker", 'guide/advice': 'Advice',
 }
 
 type Theme = 'light' | 'dark' | null
 const readTheme = (): Theme => { try { return (localStorage.getItem('xblimps.theme') as Theme) || null } catch { return null } }
 
 export default function Site({ route: raw }: { route: string }) {
-  const lang = raw.startsWith('lang/') ? raw.slice(5) : null
+  const lang = langOf(raw)
   const route = lang ? null : resolveRoute(raw)
   const [theme, setTheme] = useState<Theme>(readTheme)
   useEffect(() => { try { theme ? localStorage.setItem('xblimps.theme', theme) : localStorage.removeItem('xblimps.theme') } catch { /* ignore */ } }, [theme])
@@ -54,7 +56,7 @@ export default function Site({ route: raw }: { route: string }) {
     window.scrollTo(0, 0)
   }, [route, lang])
 
-  const active = (r: string) => (lang ? r === '' : route === r)
+  const active = (r: string) => (lang ? r === 'generator' : route === r)
 
   return (
     <div className="site cafe" data-theme={theme ?? undefined}>
@@ -76,21 +78,20 @@ export default function Site({ route: raw }: { route: string }) {
       </header>
 
       <main className="site-main" id="main">
-        {lang && <LanguagePage code={lang} />}
+        {lang && <Generator code={lang} />}
         {route === '' && <Home />}
-        {route === 'generator' && <Generator />}
+        {route === 'generator' && <Generator code={null} />}
         {route === 'guide' && <Instructions />}
         {route === 'guide/lead' && <Lead />}
         {route === 'guide/native' && <Native />}
-        {route === 'guide/demo' && <Demo />}
         {route === 'guide/advice' && <Advice />}
       </main>
 
       <footer className="site-foot">
         <div className="site-foot-inner">
           <span>xBLiMPs · Cambridge · ACL 2027 dataset · Afrikaans, Catalan, English, French, Persian, Spanish, Tagalog, Welsh (Basque in phase 2)</span>
-          <span>No AI-generated templates, words or sentences: the generator only recombines what people write.</span>
-          <span>Inspiration sentences: FineWeb-2 / FineWeb (ODC-By 1.0). Design after the CAFe project site (developerFolio).</span>
+          <span>No AI-generated templates, words or sentences. We give you words; you write the grammar.</span>
+          <span>Vocabulary samples: FineWeb-2 / FineWeb (ODC-By 1.0), English machine translations by Helsinki-NLP opus-mt (Apache-2.0) and, for Persian, Meta NLLB-200 (CC-BY-NC 4.0). Design after the CAFe project site (developerFolio).</span>
         </div>
       </footer>
     </div>

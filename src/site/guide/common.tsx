@@ -49,9 +49,9 @@ export function Terminology() {
       <div>
         <dt>Generated sentence</dt>
         <dd>
-          One ✓ / ✗ minimal pair the generator builds from a template by taking one alternative per slot. One template gives many of them
-          (3 subjects × 3 verbs × 3 objects is 27), and they are deduplicated and filtered before review. <b>Generated sentences do not count</b> toward
-          the target: that is still one template.
+          One ✓ / ✗ minimal pair the central team builds from a template after 11 Dec, by taking one alternative per slot. One template gives many of them
+          (3 subjects × 3 verbs × 3 objects is 27). <b>Contributors never generate sentences, and generated sentences do not count</b> toward the target:
+          that is still one template.
         </dd>
       </div>
     </dl>
@@ -63,7 +63,7 @@ export function Targets() {
     <div className="t-wrap">
       <table className="t">
         <tbody>
-          <tr><td><b>Per language</b></td><td><b>~1,000 templates</b> → ~10,000 generated sentences (about 10 per template on average after filtering; not a maximum)</td></tr>
+          <tr><td><b>Per language</b></td><td><b>~1,000 human-written templates</b> (the central team later turns them into ~10,000 generated sentences)</td></tr>
           <tr><td>Macrophenomena</td><td>10 per language, <b>100 templates each</b> (10 × 100 = 1,000)</td></tr>
           <tr><td>Subphenomena</td><td>Optional, at most 3 per macrophenomenon: none → 100 templates; 2 → 50 each; 3 → at least 33 each</td></tr>
           <tr><td>What counts</td><td>Templates (rows) only. Lexical alternatives and generated sentences do not count; leads' own templates do, at the same quality bar.</td></tr>
@@ -164,7 +164,7 @@ const DOL: [string, string, string][] = [
   ['Decide on a new structure', 'Decides', 'Proposes it to the lead'],
   ['Write completion instructions', 'Yes', '—'],
   ['Write templates (3–4 alternatives per slot)', 'Yes (counts toward the target)', 'Main task'],
-  ['Read every generated pair of own templates in the generator', 'Yes', 'Yes'],
+  ['Read each own template aloud: ✓ natural, ✗ wrong in exactly one way', 'Yes', 'Yes'],
   ['Ambiguities', 'Resolves', 'Flags'],
   ['Validate slot patterns before contributors use them', 'Yes', '—'],
   ['Review contributors\' templates (flags + a sample)', 'Yes', '—'],
@@ -187,7 +187,7 @@ export function Workflow() {
     <ol className="steps">
       <li><b>Design.</b> The language lead designs a slot pattern for each subphenomenon, writes the first templates under it and validates it.</li>
       <li><b>Handover.</b> Each slot pattern ships with short instructions: what to vary, what stays constant, how to fill the slots.</li>
-      <li><b>Writing.</b> Native-speaker contributors write templates under the lead's slot patterns, 3–4 alternatives in every varying slot, and read the generated pairs.</li>
+      <li><b>Writing.</b> Native-speaker contributors write templates under the lead's slot patterns, 3–4 alternatives in every varying slot, using vocabulary from real sentences in their language with the <a href="#/generator">lexical generator</a>.</li>
       <li><b>Validation.</b> The lead reviews flagged templates and a sample for consistency; automatic checks, deduplication and filtering run centrally.</li>
     </ol>
   )
@@ -198,7 +198,7 @@ export function TemplateRules() {
   return (
     <ol>
       <li><b>3–4 alternatives in every varying slot</b>, including the ✓ / ✗ contrast slot. The ✓ and ✗ alternatives are matched by position (1st ✓ with 1st ✗).</li>
-      <li><b>Semantically coherent rows.</b> The generator combines every alternative with every other alternative in its row, so each one must make sense with all the others.</li>
+      <li><b>Semantically coherent rows.</b> Every alternative is later combined with every other alternative in its row, so each one must make sense with all the others.</li>
       <li><b>One slot carries the ✓ / ✗ contrast</b>, and the ungrammaticality targets the phenomenon only (for subject–verb agreement, vary agreement, not tense or word choice).</li>
       <li><b>Each row internally consistent</b> for gender, number and similar features. One general slot pattern with gender or number changing between rows is fine, and so are separate slot patterns per configuration: choose what fits the grammar.</li>
       <li><b>Vary your words across templates.</b> Avoid reusing the same word in template after template (see lexical variety below).</li>
@@ -207,13 +207,13 @@ export function TemplateRules() {
   )
 }
 
-/** How to write the sheet so the generator reads it exactly (one line each; the generator flags anything it has to guess). */
+/** How to write the language sheet so the central team's generation reads it exactly (one line each). */
 export function SheetConventions() {
   return (
     <div className="callout">
-      <b>Sheet conventions the generator relies on</b>
+      <b>Sheet conventions (for leads and anyone writing in the sheet)</b>
       <ul style={{ margin: '6px 0 0' }}>
-        <li><b>✓ / ✗ marks:</b> mark the grammatical slot header with ✓ and its ungrammatical partner with ✗ (or start it with <span className="mono">*</span>). Names such as <span className="mono">_mismatch</span> or <span className="mono">_nonagr</span> alone are a guess: the generator asks you to check, and refuses when the names are ambiguous.</li>
+        <li><b>✓ / ✗ marks:</b> mark the grammatical slot header with ✓ and its ungrammatical partner with ✗ (or start it with <span className="mono">*</span>). Names such as <span className="mono">_mismatch</span> or <span className="mono">_nonagr</span> alone are ambiguous, so always add the mark.</li>
         <li><b>{'{Braces}'}:</b> write every slot header in braces, e.g. <span className="mono">{'{subj_sg}'}</span>, including fixed words that belong in the sentence.</li>
         <li><b>“Templates:” header:</b> start every slot-pattern header row with a <span className="mono">Templates:</span> cell, so header rows are never read as templates.</li>
         <li><b>∅ for empty:</b> write <span className="mono">∅</span> when a slot (or the ✗ side) is deliberately empty.</li>
@@ -229,8 +229,8 @@ export function LexicalVariety() {
       <b>Lexical variety</b>
       <p style={{ margin: '6px 0 0' }}>
         Avoid reusing the same word across templates. The French pilot leaned heavily on <i>fatiguée</i>, and reading the same word in pair after pair tires native-speaker
-        reviewers and weakens the dataset. Vary the people, objects, verbs and situations from one template to the next. The <a href="#/generator">sheet check</a> lists the words that
-        appear in the most templates of a tab, and the generator removes repeated pairs before you download them.
+        reviewers and weakens the dataset. Vary the people, objects, verbs and situations from one template to the next. The <a href="#/generator">lexical generator</a> gives you fresh
+        vocabulary from real text in your language every time you ask for another sentence.
       </p>
     </div>
   )
@@ -241,8 +241,8 @@ export function GroundRules() {
     <div className="callout rule">
       <b>Ground rules for everyone</b>
       <ul style={{ margin: '6px 0 0' }}>
-        <li><b>No AI-generated templates, words or sentences, ever.</b> Every template and every word in it is written by a person. (Using AI to think through slot-pattern design is fine; the generator on this site never writes words.)</li>
-        <li>No sentences copied from elsewhere.</li>
+        <li><b>No AI-generated templates, words or sentences, ever.</b> Every template and every word in it is written by a person. (Using AI to think through slot-pattern design is fine; this site never writes words for you, and its English translations are only there to help you read the sample.)</li>
+        <li>No sentences copied from elsewhere. <b>Use the words, not the sentence:</b> the real sentences from the lexical generator are vocabulary inspiration, never something to copy, translate or paraphrase.</li>
         <li>No offensive content, stereotypes, or real people's names or details.</li>
         <li>Quality over mechanically filling a spreadsheet.</li>
       </ul>
