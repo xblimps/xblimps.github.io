@@ -9,7 +9,7 @@ scripts/translate-pools.py as usual.
   python3 scripts/fineweb-stream.py es tl cy fa --n 1500
 """
 from __future__ import annotations
-import json, re, sys, datetime
+import json, os, re, sys, datetime
 from pathlib import Path
 
 SOURCES = {"af": ("HuggingFaceFW/fineweb-2", "afr_Latn"), "eu": ("HuggingFaceFW/fineweb-2", "eus_Latn"),
@@ -69,3 +69,5 @@ if __name__ == "__main__":
     n = int(a[a.index("--n") + 1]) if "--n" in a else 1500
     for c in [x for i, x in enumerate(a) if not x.startswith("--") and (i == 0 or a[i - 1] != "--n")]:
         build(c, n)
+    sys.stdout.flush()
+    os._exit(0)   # the streaming reader leaves background threads that would otherwise keep the process alive

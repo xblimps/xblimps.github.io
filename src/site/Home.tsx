@@ -1,174 +1,265 @@
-// Home (#/): the mission and recruitment page (26 Nov 2026). It sells participation in a scientific project, not a
-// spreadsheet exercise: "Does AI really understand your language? Help us find out." Then audiences, how it works
-// ("we give you words, you write the grammar"), three ways to join, the four layers of each language, the project at a
-// glance (targets only; live counts appear once submissions are connected, never invented), recognition, languages,
-// team, sessions, research and contact. Copy follows Suchir's brand direction. The example pair is the human-written
-// English reference row used across the guide.
+// Home (#/): the marketing and recruitment page (v3, 26 Nov 2026). It sells participation in a scientific project:
+// "Does AI really understand your language?" The hook is a 30-second quiz built from real human-written minimal pairs
+// (the English reference row and pairs from the linguists' notes in scripts/seed-data); it never claims model results,
+// which do not exist yet. Urgency comes from the real deadline (11 Dec), counted down in the browser. No invented
+// numbers, testimonials or logos: targets are labelled as targets, live counts wait for a backend.
 
-import React from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { LANGUAGE_DATA, CENTRAL_CONTACT } from './languages'
-import { Sessions, Confirm } from './guide/common'
+import { Sessions } from './guide/common'
+
+// Real pairs: English = the guide's human-written reference row; the others are from the linguists' notes
+// (scripts/seed-data/<code>.json), with their English gloss and explanation.
+const QUIZ = [
+  { lang: 'English', good: 'The refrigerator that stores all the cakes runs too cold.', bad: 'The refrigerator that stores all the cakes run too cold.',
+    gloss: null, why: 'The verb agrees with "the refrigerator", not with "the cakes" right next to it.' },
+  { lang: 'French', good: 'Elle est arrivée.', bad: 'Elle est arrivé.', gloss: 'She has arrived.',
+    why: 'With être, the past participle agrees with a feminine subject: arrivée.' },
+  { lang: 'Catalan', good: 'Els nens juguen al parc.', bad: 'Els nens juga al parc.', gloss: 'The children play in the park.',
+    why: 'A plural subject needs a plural verb: juguen, not juga.' },
+  { lang: 'Welsh', good: 'Pa fyfyrwyr enillodd y wobr?', bad: 'Pa fyfyrwyr enillon y wobr?', gloss: 'Which students won the prize?',
+    why: 'Welsh "anti-agreement": when the subject is questioned, the verb stays in the default singular form.' },
+  { lang: 'Tagalog', good: 'Bumili ang lalake ng isda sa tindahan.', bad: 'Bumili ang lalake ang isda sa tindahan.', gloss: 'The man bought fish at the store.',
+    why: 'Only one phrase can be the "ang" pivot in an ordinary clause, so the fish must be marked "ng".' },
+]
+
+function Quiz() {
+  // fixed order per visit, but the ✓ sentence is not always on the same side
+  const order = useMemo(() => QUIZ.map(() => Math.random() < 0.5), [])
+  const [i, setI] = useState(0)
+  const [picked, setPicked] = useState<null | 'good' | 'bad'>(null)
+  const [score, setScore] = useState(0)
+  const finished = i >= QUIZ.length
+  if (finished) {
+    return (
+      <div className="m-quiz done">
+        <div className="m-quiz-score">{score} / {QUIZ.length}</div>
+        <h3>You just took the test we give language models.</h3>
+        <p>For each pair, a model should find the grammatical sentence more likely. Native speakers get these right without thinking. xBLiMPs measures whether
+          AI does, in every language. <b>Now help us write the tests.</b></p>
+        <div className="c-btns" style={{ justifyContent: 'center' }}>
+          <a className="c-btn" href="#/contribute">Write tests for your language</a>
+          <button className="c-btn ghost" onClick={() => { setI(0); setScore(0); setPicked(null) }}>Try again</button>
+        </div>
+      </div>
+    )
+  }
+  const q = QUIZ[i]
+  const sides: ('good' | 'bad')[] = order[i] ? ['good', 'bad'] : ['bad', 'good']
+  const choose = (k: 'good' | 'bad') => { if (picked) return; setPicked(k); if (k === 'bad') setScore((s) => s + 1) }
+  return (
+    <div className="m-quiz">
+      <div className="m-quiz-top"><span className="m-pill">{q.lang}</span><span className="c-note">Question {i + 1} of {QUIZ.length}</span></div>
+      <h3>Which sentence is <u>wrong</u>?</h3>
+      <div className="m-choices">
+        {sides.map((k) => {
+          const state = picked ? (k === 'bad' ? 'is-bad' : 'is-good') : ''
+          return (
+            <button key={k} className={`m-choice ${state} ${picked === k ? 'picked' : ''}`} onClick={() => choose(k)} disabled={!!picked}>
+              {picked && <span className="m-mark" aria-hidden="true">{k === 'bad' ? '✗' : '✓'}</span>}{k === 'good' ? q.good : q.bad}
+            </button>
+          )
+        })}
+      </div>
+      {picked && (
+        <div className="m-reveal" role="status">
+          <b>{picked === 'bad' ? 'Correct!' : 'Not quite.'}</b> {q.why}{q.gloss && <> <span className="c-note">({q.gloss})</span></>}
+          <div><button className="c-btn small" style={{ marginTop: 10 }} onClick={() => { setI(i + 1); setPicked(null) }}>{i + 1 < QUIZ.length ? 'Next →' : 'See your score'}</button></div>
+        </div>
+      )}
+      <p className="c-note" style={{ marginTop: 12 }}>Real pairs written by our linguists, not by AI.</p>
+    </div>
+  )
+}
+
+function Countdown() {
+  const target = new Date('2026-12-11T23:59:00Z').getTime()
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => { const h = setInterval(() => setNow(Date.now()), 60_000); return () => clearInterval(h) }, [])
+  const days = Math.max(0, Math.ceil((target - now) / 86_400_000))
+  return <b>{days > 0 ? `${days} day${days === 1 ? '' : 's'}` : 'Final days'}</b>
+}
+
+const SHARE_TEXT = 'Does AI really understand your language? Help build open grammar tests for AI in 9 languages with xBLiMPs (University of Cambridge).'
+
+function Share() {
+  const url = typeof location !== 'undefined' ? `${location.origin}${location.pathname}` : 'https://xblimps.github.io/'
+  const [ok, setOk] = useState(false)
+  const enc = encodeURIComponent
+  return (
+    <div className="m-share">
+      <span>Know a native speaker? Share xBLiMPs:</span>
+      <a href={`https://wa.me/?text=${enc(`${SHARE_TEXT} ${url}`)}`} target="_blank" rel="noreferrer">WhatsApp</a>
+      <a href={`https://www.linkedin.com/sharing/share-offsite/?url=${enc(url)}`} target="_blank" rel="noreferrer">LinkedIn</a>
+      <a href={`https://x.com/intent/post?text=${enc(SHARE_TEXT)}&url=${enc(url)}`} target="_blank" rel="noreferrer">X</a>
+      <a href={`https://bsky.app/intent/compose?text=${enc(`${SHARE_TEXT} ${url}`)}`} target="_blank" rel="noreferrer">Bluesky</a>
+      <button onClick={async () => { try { await navigator.clipboard.writeText(url); setOk(true) } catch { /* ignore */ } }}>{ok ? 'Link copied ✓' : 'Copy link'}</button>
+    </div>
+  )
+}
+
+const FAQ: [string, string][] = [
+  ['Do I need a linguistics degree?', 'No. If you speak the language natively, you already have the knowledge we need. Your language lead explains each grammatical construction in plain words.'],
+  ['How long does it take?', 'A batch of 25 templates takes about an hour, so a full 30-template assignment is roughly an hour and a quarter, split over as many sessions as you like. Five minutes is enough to write your first one.'],
+  ['What exactly do I write?', 'Pairs of sentences: one correct, and one that is wrong in exactly one grammatical way. We give you real sentences from your language for vocabulary; you write the grammar.'],
+  ['Can I use AI tools or copy sentences?', 'No. Every template must come from a person\'s own knowledge of the language. That is the whole point: we are testing AI against human judgement.'],
+  ['Will I be credited?', 'Yes. With your permission you are acknowledged by name in the paper and the dataset, from one batch. Substantial contributions (about 300 templates, agreed in advance) can lead to co-authorship.'],
+  ['My language is not listed.', `Tell us: ${CENTRAL_CONTACT.email}. New languages join through a language lead and a native-speaker coordinator.`],
+]
 
 export default function Home() {
+  const active = LANGUAGE_DATA.filter((l) => l.status === 'active').length
   return (
-    <div>
-      <section className="c-hero" aria-labelledby="hello">
-        <div>
-          <h1 id="hello">Does AI really understand your language?</h1>
-          <p className="lead" style={{ fontSize: 22, fontWeight: 600, color: 'var(--c-ink)' }}>Help us find out.</p>
-          <p className="lead">
-            AI is learning to speak the world's languages. But speaking a language and understanding its grammar are not the same thing.
-            xBLiMPs is an open scientific project bringing together native speakers, linguists and researchers to investigate what language
-            models really know about human language.
-          </p>
-          <p className="lead"><b>We believe the people who know a language best should have a voice in how AI is tested.</b></p>
+    <div className="m">
+      {/* hero */}
+      <section className="m-hero" aria-labelledby="hello">
+        <div className="m-hero-inner">
+          <p className="m-eyebrow">Open research · University of Cambridge · {LANGUAGE_DATA.length} languages</p>
+          <h1 id="hello">Does AI really understand <span className="m-grad">your language?</span></h1>
+          <p className="m-sub">AI sounds fluent. But does it know the rules? Help us find out, with the people who know each language best: its native speakers.</p>
           <div className="c-btns">
-            <a className="c-btn" href="#/contribute">Bring your language into xBLiMPs</a>
-            <a className="c-btn ghost" href="#how">How it works</a>
+            <a className="c-btn m-big" href="#/contribute">Bring your language into xBLiMPs</a>
+            <a className="c-btn ghost m-big" href="#quiz">Take the 30-second test</a>
           </div>
-          <p className="c-note" style={{ marginTop: 14 }}>An open research collaboration · University of Cambridge</p>
+          <p className="m-trust">No linguistics degree needed · About an hour for 30 templates · Credited by name</p>
         </div>
-        <div className="c-hero-art" aria-label="An example minimal pair">
-          <div className="c-pair">
-            <p className="c-note" style={{ margin: 0, fontWeight: 600 }}>A grammatical test, written by a person:</p>
-            <div className="g">✓ The refrigerator that stores all the cakes <mark>runs</mark> too cold.</div>
-            <div className="b">✗ The refrigerator that stores all the cakes <mark>run</mark> too cold.</div>
-            <p className="c-note" style={{ margin: 0 }}>The verb must agree with <i>the refrigerator</i>, not with <i>the cakes</i> next to it.
-              Does a language model prefer the first sentence, in every language? That is what xBLiMPs measures.</p>
+        <div className="m-marquee" aria-label="Project languages">
+          <div className="m-track">
+            {[...LANGUAGE_DATA, ...LANGUAGE_DATA].map((l, k) => <span key={k} dir={l.dir}>{l.native}</span>)}
           </div>
         </div>
       </section>
 
-      <section className="c-section" aria-labelledby="who-for">
-        <h2 id="who-for">Your knowledge is the research contribution</h2>
-        <p className="kicker">You don't need to build AI models to contribute to AI research</p>
-        <div className="c-grid">
-          <div className="c-card"><span className="tag">Native speakers</span><h3>Your language deserves to be understood by AI</h3>
-            <p>You know what sounds right in your language. AI might not. No linguistics degree needed.</p></div>
-          <div className="c-card"><span className="tag">Linguists</span><h3>Put linguistic theory to the test</h3>
-            <p>Turn agreement, word order, morphology and syntax into controlled experiments on how machines process language.</p></div>
-          <div className="c-card"><span className="tag">Students</span><h3>Turn your knowledge into research</h3>
-            <p>Contribute to an international collaboration on human language and artificial intelligence, and be credited for it.</p></div>
-          <div className="c-card"><span className="tag">Multilingual communities</span><h3>The future of AI shouldn't belong to English alone</h3>
-            <p>Help bring the world's linguistic diversity into how AI is evaluated.</p></div>
+      {/* the hook */}
+      <section className="c-section m-center" id="quiz" aria-labelledby="quiz-h">
+        <p className="m-eyebrow">Try it</p>
+        <h2 id="quiz-h">Can you spot the mistake? Can AI?</h2>
+        <p className="m-lede">Five real pairs from five languages. Each pair is identical except in one place. This is exactly how we test language models.</p>
+        <Quiz />
+      </section>
+
+      {/* why */}
+      <section className="c-section" aria-labelledby="why-h">
+        <p className="m-eyebrow">Why it matters</p>
+        <h2 id="why-h">The future of AI shouldn't belong to English alone.</h2>
+        <div className="c-grid m-why">
+          <div className="c-card"><div className="m-ico" aria-hidden="true">🌍</div><h3>Most AI is tested in English</h3>
+            <p>A model that looks brilliant in English may stumble on the grammar of other languages. We need tests that are native to each language, not translated.</p></div>
+          <div className="c-card"><div className="m-ico" aria-hidden="true">🧠</div><h3>Fluency is not understanding</h3>
+            <p>Convincing text is not proof that a model knows the rules behind it. Minimal pairs isolate one rule at a time, so the answer is unambiguous.</p></div>
+          <div className="c-card"><div className="m-ico" aria-hidden="true">🗣️</div><h3>Native speakers know best</h3>
+            <p>What sounds right in your language can't be looked up or translated from English. Your judgement is the research contribution.</p></div>
         </div>
       </section>
 
+      {/* how */}
       <section className="c-section" id="how" aria-labelledby="how-h">
-        <h2 id="how-h">How it works</h2>
-        <p className="kicker">We give you words. You write the grammar.</p>
-        <div className="c-grid">
-          <div className="c-card"><span className="tag">1</span><h3>Choose your language</h3><p>Select the language you speak natively.</p></div>
-          <div className="c-card"><span className="tag">2</span><h3>See your construction</h3><p>We tell you which grammatical construction to work on, for example subject–verb agreement.</p></div>
-          <div className="c-card"><span className="tag">3</span><h3>Look at the words</h3><p>We show you a sentence from real text in your language, with an English translation and words you could reuse.</p></div>
-          <div className="c-card"><span className="tag">4</span><h3>Write your own examples</h3><p>A correct sentence and an incorrect version that differs only in the target feature.</p></div>
-          <div className="c-card"><span className="tag">5</span><h3>Submit</h3><p>Add your templates to your language's sheet. Repeat with new words to keep the dataset diverse.</p></div>
+        <p className="m-eyebrow">How it works</p>
+        <h2 id="how-h">We give you words. You write the grammar.</h2>
+        <div className="m-steps">
+          <div><span>1</span><h3>Pick your language</h3><p>And the grammatical construction your language lead assigns, like subject–verb agreement.</p></div>
+          <div><span>2</span><h3>Grab some words</h3><p>We show you a real sentence from your language, with an English translation and words you can reuse.</p></div>
+          <div><span>3</span><h3>Write a test</h3><p>A correct sentence and a version that is wrong in exactly one way. Use the words, not the sentence.</p></div>
+          <div><span>4</span><h3>Make it count</h3><p>30 templates, about 3 per grammatical area. Your lead reviews them, and they become part of an open benchmark.</p></div>
         </div>
-        <div className="c-callout" style={{ marginTop: 20 }}>
-          <h3>Use the words, NOT the sentence.</h3>
-          <p style={{ margin: 0, lineHeight: 1.6 }}>Don't copy, translate or paraphrase the sample sentence. Rearrange its words, substitute others, change the structure, or build
-            something entirely new. Asked for subject–verb agreement, you might take <i>refrigerator</i>, <i>cakes</i>, <i>store</i> and <i>freezer</i> and write your own
-            sentences that test whether the verb agrees with its subject.</p>
+        <div className="c-btns" style={{ marginTop: 22 }}><a className="c-btn" href="#/contribute">Start writing</a></div>
+      </section>
+
+      {/* what you get */}
+      <section className="c-section" aria-labelledby="get-h">
+        <p className="m-eyebrow">What you get</p>
+        <h2 id="get-h">You're not filling in a spreadsheet. You're joining a research project.</h2>
+        <div className="c-grid">
+          <div className="c-card"><h3>📄 Your name in the research</h3><p>Acknowledged by name in the paper and the open dataset (with your permission).</p></div>
+          <div className="c-card"><h3>✍️ A path to co-authorship</h3><p>Substantial contributions, agreed with the team in advance, can lead to co-authorship of the ACL 2027 paper.</p></div>
+          <div className="c-card"><h3>🎓 Real research experience</h3><p>Learn how linguistic theory becomes a controlled experiment, alongside Cambridge researchers.</p></div>
+          <div className="c-card"><h3>🧭 Lead your language</h3><p>Grow from contributor to reviewer, coordinator or language lead.</p></div>
+        </div>
+        <p className="c-note" style={{ marginTop: 10 }}>Payment for paid languages and the exact credit rules are in the <a href="#/guide/native">contributor guide</a>.</p>
+      </section>
+
+      {/* who */}
+      <section className="c-section" aria-labelledby="who-h">
+        <p className="m-eyebrow">Who we need</p>
+        <h2 id="who-h">There's a place for you, whatever your background.</h2>
+        <div className="c-grid">
+          <div className="c-card"><span className="tag">Native speakers</span><h3>Your language deserves to be understood by AI.</h3><p>Write a few tests or join a core team.</p></div>
+          <div className="c-card"><span className="tag">Linguists</span><h3>Put linguistic theory to the test.</h3><p>Lead a language: choose the constructions and design the templates.</p></div>
+          <div className="c-card"><span className="tag">Students</span><h3>Turn your knowledge into research.</h3><p>A real contribution to AI research, with your name on it.</p></div>
+          <div className="c-card"><span className="tag">Community builders</span><h3>Bring your language community together.</h3><p>Become a native-speaker coordinator and grow your language's team.</p></div>
         </div>
       </section>
 
+      {/* join */}
       <section className="c-section" aria-labelledby="join-h">
-        <h2 id="join-h">Three ways to join</h2>
-        <p className="kicker">Choose the commitment that suits you</p>
-        <div className="c-grid">
-          <div className="c-card"><span className="tag">Lead a language</span><h3>Take scientific or community ownership</h3>
-            <p>As a linguist, define the constructions and check quality. As a native-speaker coordinator, build and run your language's community.</p>
-            <p style={{ marginTop: 10 }}><a href={`mailto:${CENTRAL_CONTACT.email}?subject=${encodeURIComponent('xBLiMPs: lead or coordinate a language')}`}>Get in touch →</a></p></div>
-          <div className="c-card"><span className="tag">Build a language</span><h3>Join a core team</h3>
-            <p>A small, committed group of 3–8 speakers who write about 30 templates each and review one another's work.</p>
-            <p style={{ marginTop: 10 }}><a href={`mailto:${CENTRAL_CONTACT.email}?subject=${encodeURIComponent('xBLiMPs: join a core team')}`}>Join a team →</a></p></div>
-          <div className="c-card"><span className="tag">Contribute to a language</span><h3>Whenever you have time</h3>
-            <p>Write a few templates, suggest a construction, or flag a sentence that sounds wrong. Five minutes is enough to help.</p>
-            <p style={{ marginTop: 10 }}><a href="#/contribute">Start now →</a></p></div>
+        <p className="m-eyebrow">Get involved</p>
+        <h2 id="join-h">Lead it. Build it. Or just contribute.</h2>
+        <div className="m-tiers">
+          <div className="m-tier"><h3>Contribute</h3><p className="m-tier-time">5 minutes or more</p><p>Write a few templates, suggest a construction, or flag a sentence that sounds wrong.</p>
+            <a className="c-btn" href="#/contribute">Start now</a></div>
+          <div className="m-tier m-tier-hot"><span className="m-badge">Most needed</span><h3>Build a language</h3><p className="m-tier-time">30 templates · about an hour and a quarter</p>
+            <p>Join a core team of 3–8 speakers who write and review your language's main collection.</p>
+            <a className="c-btn" href={`mailto:${CENTRAL_CONTACT.email}?subject=${encodeURIComponent('xBLiMPs: join a core team')}`}>Join a team</a></div>
+          <div className="m-tier"><h3>Lead a language</h3><p className="m-tier-time">Ongoing</p><p>As a linguist (scientific lead) or a native-speaker coordinator (community lead).</p>
+            <a className="c-btn ghost" href={`mailto:${CENTRAL_CONTACT.email}?subject=${encodeURIComponent('xBLiMPs: lead or coordinate a language')}`}>Get in touch</a></div>
         </div>
       </section>
 
-      <section className="c-section" aria-labelledby="layers-h">
-        <h2 id="layers-h">Every language, four layers</h2>
-        <p className="kicker">A small research community around each language</p>
-        <div className="c-grid">
-          <div className="c-card"><span className="tag">Layer 1</span><h3>Language lead</h3><p>A linguistics researcher who defines the constructions, designs templates and validates quality.</p></div>
-          <div className="c-card"><span className="tag">Layer 2</span><h3>Native-speaker coordinator</h3><p>Recruits speakers, runs onboarding, allocates work, follows up and makes sure everyone is credited.</p></div>
-          <div className="c-card"><span className="tag">Layer 3</span><h3>Core team</h3><p>3–8 dedicated speakers who write and review the main collection of templates.</p></div>
-          <div className="c-card"><span className="tag">Layer 4</span><h3>Open community</h3><p>Anyone who speaks the language: extra templates, suggested constructions, naturalness judgements.</p></div>
+      {/* urgency */}
+      <section className="m-band" aria-labelledby="deadline-h">
+        <div>
+          <h2 id="deadline-h"><Countdown /> until the datasets close</h2>
+          <p>Every language needs about 1,000 templates by <b>11 December</b>, across 10 grammatical areas. The paper goes to ACL on 4 January 2027.</p>
         </div>
+        <a className="c-btn m-big m-light" href="#/contribute">Help your language make it</a>
       </section>
 
-      <section className="c-section" aria-labelledby="glance-h">
-        <h2 id="glance-h">The project at a glance</h2>
-        <p className="kicker">Targets for the ACL 2027 dataset</p>
-        <div className="c-stats">
-          <div className="c-stat"><b>{LANGUAGE_DATA.filter((l) => l.status === 'active').length}</b><span>languages in the first release (Basque in phase 2)</span></div>
-          <div className="c-stat"><b>~1,000</b><span>human-written templates per language</span></div>
-          <div className="c-stat"><b>10</b><span>grammatical areas per language, ~100 templates each</span></div>
-          <div className="c-stat"><b>30</b><span>templates per contributor, about 3 per area</span></div>
-          <div className="c-stat"><b>11 Dec</b><span>datasets complete; paper submitted 4 Jan 2027</span></div>
-        </div>
-        <p className="c-note" style={{ marginTop: 12 }}>Live counts of contributors and approved templates will appear here once submissions are connected to the site.
-          We count <b>approved</b> templates, not just submitted ones.</p>
-      </section>
-
-      <section className="c-section" aria-labelledby="credit-h">
-        <h2 id="credit-h">Recognition</h2>
-        <p className="kicker">Contributors are research collaborators</p>
-        <div className="c-grid">
-          <div className="c-card"><h3>Credited by name</h3><p>With your permission, in the paper and the dataset documentation, from one batch of templates.</p></div>
-          <div className="c-card"><h3>Co-authorship</h3><p>Substantial contributions (about 300 templates, agreed with the team in advance) can lead to co-authorship.</p></div>
-          <div className="c-card"><h3>A path to leading</h3><p>Especially knowledgeable contributors can become reviewers, coordinators or language leads.</p></div>
-        </div>
-        <p className="c-note" style={{ marginTop: 10 }}>Payment for paid languages and the details of credit are in the <a href="#/guide/native">native-speaker guide</a>.</p>
-      </section>
-
+      {/* languages */}
       <section className="c-section" id="languages" aria-labelledby="langs-h">
+        <p className="m-eyebrow">{active} languages now · Basque in phase 2</p>
         <h2 id="langs-h">Choose your language</h2>
-        <p className="kicker">Each language has its own page and team</p>
         <div className="c-langs">
           {LANGUAGE_DATA.map((l) => (
             <a key={l.code} href={`#/contribute/${l.code}`} className={`c-lang${l.status === 'active' ? '' : ' off'}`}>
-              <b>{l.name}</b><span className="native" dir={l.dir}>{l.native}</span>
-              <div className="state">{l.status === 'active' ? 'Contribute →' : 'Phase 2 · find out more →'}</div>
+              <b dir={l.dir} style={{ fontSize: 20 }}>{l.native}</b><span className="native">{l.name}</span>
+              <div className="state">{l.status === 'active' ? 'Contribute →' : 'Phase 2 · start →'}</div>
             </a>
           ))}
         </div>
       </section>
 
-      <section className="c-section" aria-labelledby="team-h">
-        <h2 id="team-h">Who we are</h2>
-        <p className="kicker">University of Cambridge, with language leads around the world</p>
-        <div className="c-grid">
-          <div className="c-card"><span className="tag">Central team</span><h3>University of Cambridge</h3><p>{CENTRAL_CONTACT.team}</p></div>
-          <div className="c-card"><span className="tag">Language leads</span><h3>One or two per language</h3>
-            <p>Listed on each language's page once they agree. <Confirm>lead names, once each lead agrees to be listed</Confirm></p></div>
+      {/* faq */}
+      <section className="c-section" aria-labelledby="faq-h">
+        <p className="m-eyebrow">Questions</p>
+        <h2 id="faq-h">Good to know</h2>
+        <div className="m-faq">
+          {FAQ.map(([q, a]) => <details key={q}><summary>{q}</summary><p>{a}</p></details>)}
         </div>
       </section>
 
       <section className="c-section" aria-labelledby="sess-h">
-        <h2 id="sess-h">Sessions</h2>
-        <p className="kicker">Drop in, ask questions, write templates together (UK time)</p>
+        <p className="m-eyebrow">Meet us</p>
+        <h2 id="sess-h">Drop-in sessions (UK time)</h2>
         <Sessions />
       </section>
 
-      <section className="c-section" aria-labelledby="res-h">
-        <h2 id="res-h">Research</h2>
-        <p className="kicker">Where xBLiMPs comes from</p>
+      <section className="c-section" aria-labelledby="team-h">
+        <p className="m-eyebrow">Who we are</p>
+        <h2 id="team-h">An open research collaboration</h2>
         <div className="c-grid">
+          <div className="c-card"><span className="tag">Central team · University of Cambridge</span><p style={{ marginTop: 8 }}>{CENTRAL_CONTACT.team}</p></div>
           <a className="c-card" href="https://aclanthology.org/2020.tacl-1.25/" target="_blank" rel="noreferrer" style={{ textDecoration: 'none' }}>
-            <span className="tag">Warstadt et al., 2020 · TACL</span><h3>BLiMP: The Benchmark of Linguistic Minimal Pairs for English</h3>
-            <p>The English benchmark whose minimal-pair design xBLiMPs extends to many languages, with original sentences written by native speakers.</p></a>
-          <div className="c-card"><span className="tag">ACL 2027 · in preparation</span><h3>xBLiMPs</h3>
-            <p>An open benchmark of human-written grammatical tests across languages, and what they reveal about language models.</p></div>
+            <span className="tag">Builds on · Warstadt et al., 2020</span><h3>BLiMP</h3><p>The English benchmark of linguistic minimal pairs that xBLiMPs extends to many languages, with original sentences written by native speakers.</p></a>
+          <div className="c-card"><span className="tag">Contact</span><p style={{ marginTop: 8 }}>{CENTRAL_CONTACT.slack} on the CambridgeNLP Slack, or <a href={`mailto:${CENTRAL_CONTACT.email}`}>{CENTRAL_CONTACT.email}</a>.</p></div>
         </div>
       </section>
 
-      <section className="c-section" aria-labelledby="contact-h">
-        <h2 id="contact-h">Contact us</h2>
-        <p className="kicker">There are no silly questions</p>
-        <p>Ask in <b>{CENTRAL_CONTACT.slack}</b> on the CambridgeNLP Slack, ask your language lead, or e-mail <a href={`mailto:${CENTRAL_CONTACT.email}`}>{CENTRAL_CONTACT.email}</a>.</p>
+      {/* final cta */}
+      <section className="m-final">
+        <h2>Your language. Your knowledge. A global scientific project.</h2>
+        <p>Help make AI accountable to the world's languages.</p>
+        <a className="c-btn m-big m-light" href="#/contribute">Bring your language into xBLiMPs</a>
+        <Share />
       </section>
     </div>
   )
