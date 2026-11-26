@@ -14,7 +14,7 @@ from pathlib import Path
 
 SOURCES = {"af": ("HuggingFaceFW/fineweb-2", "afr_Latn"), "eu": ("HuggingFaceFW/fineweb-2", "eus_Latn"),
            "ca": ("HuggingFaceFW/fineweb-2", "cat_Latn"), "en": ("HuggingFaceFW/fineweb", "sample-10BT"),
-           "fr": ("HuggingFaceFW/fineweb-2", "fra_Latn"), "fa": ("HuggingFaceFW/fineweb-2", "pes_Arab"),
+           "fr": ("HuggingFaceFW/fineweb-2", "fra_Latn"), "fa": ("HuggingFaceFW/fineweb-2", "fas_Arab"),
            "es": ("HuggingFaceFW/fineweb-2", "spa_Latn"), "tl": ("HuggingFaceFW/fineweb-2", "fil_Latn"),
            "cy": ("HuggingFaceFW/fineweb-2", "cym_Latn")}
 

@@ -1,6 +1,6 @@
 // The guide: the one place for xBLiMPs instructions for language leads and native-speaker
 // contributors, in four pages: Instructions (overview), I'm a Language Lead, I'm a Native Speaker and
-// Advice. Contributors write on the Contribute page (#/contribute); there is no generator on the site. Terms, targets and dates follow Suchir's decisions of 23–24 Nov 2026
+// Advice. Contributors write on the lexical generator (#/contribute); there is no generator on the site. Terms, targets and dates follow Suchir's decisions of 23–24 Nov 2026
 // (template = the unit that counts; slot pattern = the lead's structure). Items still being
 // confirmed are described as pending and never stated as policy.
 
@@ -19,7 +19,7 @@ export function Instructions() {
       <p className="lede">
         xBLiMPs is a crowd-built, multilingual benchmark of minimal pairs in the style of BLiMP: pairs of sentences that are
         identical except for one place, where one sentence is grammatical (✓) and the other is not (✗). Language leads design
-        slot patterns; native speakers write templates, using vocabulary from real sentences in their language on the <a href="#/contribute">Contribute</a> page.
+        slot patterns; native speakers write templates, using vocabulary from real sentences in their language with the <a href="#/generator">lexical generator</a>.
         We give you words. You write the grammar.
         This site is the one place for the instructions, for every project language.
       </p>
@@ -63,7 +63,7 @@ export function Instructions() {
       <WorkedTable />
       <p>The writing rules are in <a href="#/guide/advice">Advice</a>.</p>
 
-      <h2>Timeline</h2>
+      <h2>Phase 1 timeline</h2>
       <Timeline />
 
       <h2>Sessions (UK time)</h2>
@@ -125,7 +125,7 @@ export function Lead() {
         <li>Review <b>flagged templates</b> and a <b>sample</b> of each contributor's templates. Automatic checks, deduplication and filtering run centrally.</li>
         <li>Check each sampled template: semantically coherent, every combination natural, ✗ wrong only for the phenomenon, row-internal gender/number consistency, no new structure, varied vocabulary, nothing offensive, copied or AI-generated.</li>
         <li>Decide on contributors' ideas for new structures. If a slot pattern is impossible to complete in your language, fix the slot pattern, not the templates.</li>
-        <li>Contributions from the <a href="#/contribute">Contribute</a> page arrive as a ✓ / ✗ example with the phenomenon, notes on other words that work, and the contributor's name. Fold them into your slot pattern in the sheet, or ask the contributor to write the row directly.</li>
+        <li>Contributions from the <a href="#/generator">lexical generator</a> arrive as a ✓ / ✗ example with the phenomenon, notes on other words that work, and the contributor's name. Fold them into your slot pattern in the sheet, or ask the contributor to write the row directly.</li>
         <li>Do the <b>final linguistic validation</b> before 11 Dec.</li>
       </ul>
 
@@ -166,7 +166,7 @@ export function Native() {
       <h2>What you do</h2>
       <ol className="steps">
         <li><b>Read the information sheet.</b> Your language lead will tell you if you need to fill in any paperwork.</li>
-        <li><b>Open the <a href="#/contribute">Contribute</a> page and choose your language.</b> Your lead tells you which grammatical phenomenon to work on.</li>
+        <li><b>Open the <a href="#/generator">lexical generator</a> and choose your language.</b> Your lead tells you which grammatical phenomenon to work on.</li>
         <li><b>Take the words, not the sentence.</b> We show you a real sentence from your language with an English translation and some words you could reuse. Build your own new sentences with them.</li>
         <li><b>Write a template:</b> a grammatical (✓) version and an ungrammatical (✗) version that differ only in the target feature, plus other words that would also work. If your lead gave you a sheet and slot pattern, write the row there with 3–4 alternatives in every varying slot. A batch is 25 templates (about an hour).</li>
         <li><b>Read each one aloud.</b> The ✓ must sound natural to you; the ✗ must be wrong in exactly one way.</li>
@@ -252,7 +252,7 @@ const MISTAKES: [string, string][] = [
   ['The ✗ sentence is wrong for two reasons (agreement and tense, say)', 'Change only the phenomenon in the ✗ slot; everything else is identical to the ✓.'],
   ['Alternatives that clash (a verb that cannot take one of the objects)', 'Every alternative must make sense with every alternative in the other slots. Remove the clashing one or give it its own row.'],
   ['Mixing genders or numbers inside one row', 'Keep each row internally consistent; put the other gender or number in its own row (or its own slot pattern).'],
-  ['The same word in template after template (the French pilot\'s “fatiguée”)', 'Vary the vocabulary across templates. Ask the Contribute page for another sentence to get fresh words.'],
+  ['The same word in template after template (the French pilot\'s “fatiguée”)', 'Vary the vocabulary across templates. Ask the lexical generator for another sentence to get fresh words.'],
   ['Counting generated sentences or alternatives', 'Only templates (rows) count. 27 generated pairs from one row is one template.'],
   ['Forcing variation where the language offers none', 'Never force it. Tell your lead if a slot cannot take 3–4 natural alternatives.'],
   ['Inventing a new structure', 'Contributors write under the lead\'s slot pattern. Propose new structures to the lead, who decides.'],
@@ -274,7 +274,7 @@ const FAQ: [string, React.ReactNode][] = [
   ['Can a contributor add a new structure?', <>No. Contributors write templates under the lead's slot pattern. An idea for a new structure goes to the lead, who decides.</>],
   ['How many alternatives per slot?', <>3–4 in every varying slot, including the ✓ / ✗ slot. Every alternative must make sense with every other alternative in its row, because they are combined later.</>],
   ['Where do the sample sentences come from?', <>From FineWeb-2, a large public collection of web text in many languages (FineWeb for English), with an English machine translation underneath. They are there for vocabulary only: you write the grammar.</>],
-  ['Why avoid reusing the same word?', <>Repeated vocabulary (the French pilot leaned on <i>fatiguée</i>) tires native-speaker reviewers. Vary your words across templates; the Contribute page gives you fresh vocabulary each time.</>],
+  ['Why avoid reusing the same word?', <>Repeated vocabulary (the French pilot leaned on <i>fatiguée</i>) tires native-speaker reviewers. Vary your words across templates; the lexical generator gives you fresh vocabulary each time.</>],
   ['Can I use AI tools?', <>No AI-generated templates, words or sentences, ever. No copied sentences, offensive content or real people either.</>],
   ['Is the 11 Dec deadline moving?', <>No. 11 Dec stays the project target, with full datasets for every language. Paper draft 18 Dec; ACL submission 4 Jan 2027.</>],
   ['How are contributors paid and credited?', <>Paid batches of 25 templates at £15.50, for paid languages only, in vouchers via the department. One batch or more: acknowledged by name. Co-authorship: about 300 templates agreed in advance, plus an OpenReview account before 11 Dec. Paid contributors cannot be authors.</>],
@@ -318,7 +318,7 @@ export function Advice() {
         <li><b>Speakers disagree, or it depends on region or register.</b> Flag it with a note; do not choose a variety on your own.</li>
         <li><b>The slot pattern is impossible in my language.</b> Flag it to your lead with the reason; do not rewrite it.</li>
         <li><b>I can only think of one or two natural options for a slot.</b> Tell your lead; the slot pattern may need adjusting.</li>
-        <li><b>I keep reaching for the same words.</b> Change the people, objects or situation of the next template, or ask the Contribute page for another sentence.</li>
+        <li><b>I keep reaching for the same words.</b> Change the people, objects or situation of the next template, or ask the lexical generator for another sentence.</li>
       </ul>
 
       <h2>Who to ask</h2>

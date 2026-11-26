@@ -187,7 +187,7 @@ export function Workflow() {
     <ol className="steps">
       <li><b>Design.</b> The language lead designs a slot pattern for each subphenomenon, writes the first templates under it and validates it.</li>
       <li><b>Handover.</b> Each slot pattern ships with short instructions: what to vary, what stays constant, how to fill the slots.</li>
-      <li><b>Writing.</b> Native-speaker contributors write templates under the lead's slot patterns, 3–4 alternatives in every varying slot, using vocabulary from real sentences in their language on the <a href="#/contribute">Contribute</a> page.</li>
+      <li><b>Writing.</b> Native-speaker contributors write templates under the lead's slot patterns, 3–4 alternatives in every varying slot, using vocabulary from real sentences in their language with the <a href="#/generator">lexical generator</a>.</li>
       <li><b>Validation.</b> The lead reviews flagged templates and a sample for consistency; automatic checks, deduplication and filtering run centrally.</li>
     </ol>
   )
@@ -229,7 +229,7 @@ export function LexicalVariety() {
       <b>Lexical variety</b>
       <p style={{ margin: '6px 0 0' }}>
         Avoid reusing the same word across templates. The French pilot leaned heavily on <i>fatiguée</i>, and reading the same word in pair after pair tires native-speaker
-        reviewers and weakens the dataset. Vary the people, objects, verbs and situations from one template to the next. The <a href="#/contribute">Contribute</a> page gives you fresh
+        reviewers and weakens the dataset. Vary the people, objects, verbs and situations from one template to the next. The <a href="#/generator">lexical generator</a> gives you fresh
         vocabulary from real text in your language every time you ask for another sentence.
       </p>
     </div>
@@ -242,7 +242,7 @@ export function GroundRules() {
       <b>Ground rules for everyone</b>
       <ul style={{ margin: '6px 0 0' }}>
         <li><b>No AI-generated templates, words or sentences, ever.</b> Every template and every word in it is written by a person. (Using AI to think through slot-pattern design is fine; this site never writes words for you, and its English translations are only there to help you read the sample.)</li>
-        <li>No sentences copied from elsewhere. <b>Use the words, not the sentence:</b> the real sentences on the Contribute page are vocabulary inspiration, never something to copy, translate or paraphrase.</li>
+        <li>No sentences copied from elsewhere. <b>Use the words, not the sentence:</b> the real sentences from the lexical generator are vocabulary inspiration, never something to copy, translate or paraphrase.</li>
         <li>No offensive content, stereotypes, or real people's names or details.</li>
         <li>Quality over mechanically filling a spreadsheet.</li>
       </ul>

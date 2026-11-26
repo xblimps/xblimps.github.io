@@ -1,35 +1,29 @@
-# xBLiMPs: contributor recruitment and template-writing site (https://xblimps.github.io/)
+# xBLiMPs: recruitment site and lexical generator (https://xblimps.github.io/)
 
-**Home (`#/`)** is the mission and recruitment page: "Does AI really understand your language? Help us find out." It
-covers who can contribute, how it works, three ways to join (lead, build or contribute to a language), the four layers
-of each language (lead, native-speaker coordinator, core team of 3–8, open community), the project at a glance
-(targets only: live counts appear once submissions are connected), recognition, languages, team, sessions and research.
+**Home (`#/`)** is the marketing and recruitment page: "Does AI really understand your language?". It has a 30-second
+"spot the mistake" quiz built from real human-written pairs, then why it matters, how it works, what you get, who we
+need, "You can be…" roles (contributor, core team, coordinator, language lead, start a new language), and the phases
+band. xBLiMPs is built in phases, language by language, towards 182 BLiMPs, so the site shows no deadline
+countdowns. The language grid is recruiting for every language ("a few sentences or hundreds"), with an Add your
+language card. It ends with an FAQ, sessions, team and share links. There are no invented numbers, testimonials or
+model results.
 
-**Contribute (`#/contribute`, `#/contribute/<code>`)** is the contributor workflow. We give you words; you write the
-grammar.
-1. Choose your language.
-2. Choose the grammatical construction. The list comes from the linguists' notes (`src/site/phenomena.ts`, built from
-   `scripts/seed-data/` by `scripts/build-phenomena.py`), or the BLiMP-style examples from the lead deck. The language
-   lead confirms the assignment.
-3. Get vocabulary inspiration: a random sentence from real text in that language (FineWeb-2; FineWeb for English) with
-   a precomputed English machine translation and "words you could reuse". There are buttons for another sentence and
-   skip, and the session avoids repeats. Use the words, not the sentence.
-4. Write your own template: a ✓ sentence, a ✗ version that differs only in the target feature, and optional other
-   words that also work. The checks cover missing parts, ✓ identical to ✗, too many differences, and a ✓ that follows
-   the sample too closely. They never judge grammaticality.
-5. Work through a 30-template assignment (about 3 in each of 10 areas), tracked in this browser. Copy the templates
-   for the language sheet or download a CSV, and share an invitation link.
-
-There is no backend: drafts, saved templates and progress stay in the contributor's browser.
+**Lexical generator (`#/generator`, `#/generator/<code>`)** is all the public site does for contributors. Pick a
+language and get a random real sentence (FineWeb-2; FineWeb for English) with a precomputed English machine
+translation and words to reuse, with another, copy-words and skip buttons. Sentences don't repeat within a session.
+We give you words; you write the grammar. **Template writing is private:** it happens in each language's sheet with
+its lead, so there are no construction lists, assignments or writing forms on the public site. Each language page also
+recruits for every role.
 
 **Vocabulary pools** (`public/fineweb/<code>.json`, about 400 sentences per language) are built offline:
 `node scripts/fineweb-sample.mjs` (the datasets API) or `python3 scripts/fineweb-stream.py` (streaming fallback for busy
-subsets), then `python3 scripts/translate-pools.py` (Helsinki-NLP opus-mt, Apache-2.0; Persian uses opus-mt-mul-en).
+subsets), then `python3 scripts/translate-pools.py` (Helsinki-NLP opus-mt, Apache-2.0; Persian and Welsh use Meta NLLB-200,
+CC-BY-NC 4.0, because the opus-mt models hallucinate on them).
 Untranslatable sentences are dropped, so the site never shows a sentence without its translation.
 
 **The lexical generator was removed from the site on 26 Nov 2026.** Its engine is kept for the central team, which
 generates sentences from the templates after 11 Dec: `scripts/lexgen/lexgen.ts`, tests in
-`scripts/lexgen/lexgen.test.ts` (`npm test`). Old links (`#/generator`, `#/check`, `#/lang/<code>`, `#/guide/demo`)
+`scripts/lexgen/lexgen.test.ts` (`npm test`). Old links (`#/contribute`, `#/check`, `#/lang/<code>`, `#/guide/demo`)
 open the page that replaced them.
 
 Terms (Suchir, 23–24 Nov 2026): a **template** is the unit that counts (one sheet row, formerly
@@ -38,7 +32,7 @@ Terms (Suchir, 23–24 Nov 2026): a **template** is the unit that counts (one sh
 Canonical site: **https://xblimps.github.io/** (GitHub Pages, deployed from `main` by
 `.github/workflows/deploy.yml`). The Vercel deployment is retired; do not link to it.
 
-Public navigation is deliberately minimal: **Home** (`#/`), **Contribute** (`#/contribute`),
+Public navigation is deliberately minimal: **Home** (`#/`), **Lexical generator** (`#/generator`),
 **Instructions** (`#/guide`: languages, terms, targets, workflow, timeline, sessions in UK time),
 **I'm a Language Lead** (`#/guide/lead`, including the handover checklists), **I'm a Native
 Speaker** (`#/guide/native`) and **Advice** (`#/guide/advice`: writing rules, lexical variety, common

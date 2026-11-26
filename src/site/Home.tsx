@@ -1,12 +1,14 @@
 // Home (#/): the marketing and recruitment page (v3, 26 Nov 2026). It sells participation in a scientific project:
 // "Does AI really understand your language?" The hook is a 30-second quiz built from real human-written minimal pairs
 // (the English reference row and pairs from the linguists' notes in scripts/seed-data); it never claims model results,
-// which do not exist yet. Urgency comes from the real deadline (11 Dec), counted down in the browser. No invented
-// numbers, testimonials or logos: targets are labelled as targets, live counts wait for a backend.
+// which do not exist yet. No invented
+// numbers, testimonials or logos. xBLiMPs runs in phases, language by language, towards 182 BLiMPs: no deadline
+// countdowns on the public site (26 Nov 2026). Recruitment is people-first ("You can be…") and at scale.
 
 import React, { useEffect, useMemo, useState } from 'react'
 import { LANGUAGE_DATA, CENTRAL_CONTACT } from './languages'
 import { Sessions } from './guide/common'
+import { YouCanBe, LanguageGrid } from './Generator'
 
 // Real pairs: English = the guide's human-written reference row; the others are from the linguists' notes
 // (scripts/seed-data/<code>.json), with their English gloss and explanation.
@@ -38,7 +40,7 @@ function Quiz() {
         <p>For each pair, a model should find the grammatical sentence more likely. Native speakers get these right without thinking. xBLiMPs measures whether
           AI does, in every language. <b>Now help us write the tests.</b></p>
         <div className="c-btns" style={{ justifyContent: 'center' }}>
-          <a className="c-btn" href="#/contribute">Write tests for your language</a>
+          <a className="c-btn" href="#/generator">Get involved in your language</a>
           <button className="c-btn ghost" onClick={() => { setI(0); setScore(0); setPicked(null) }}>Try again</button>
         </div>
       </div>
@@ -72,14 +74,6 @@ function Quiz() {
   )
 }
 
-function Countdown() {
-  const target = new Date('2026-12-11T23:59:00Z').getTime()
-  const [now, setNow] = useState(() => Date.now())
-  useEffect(() => { const h = setInterval(() => setNow(Date.now()), 60_000); return () => clearInterval(h) }, [])
-  const days = Math.max(0, Math.ceil((target - now) / 86_400_000))
-  return <b>{days > 0 ? `${days} day${days === 1 ? '' : 's'}` : 'Final days'}</b>
-}
-
 const SHARE_TEXT = 'Does AI really understand your language? Help build open grammar tests for AI in 9 languages with xBLiMPs (University of Cambridge).'
 
 function Share() {
@@ -100,28 +94,27 @@ function Share() {
 
 const FAQ: [string, string][] = [
   ['Do I need a linguistics degree?', 'No. If you speak the language natively, you already have the knowledge we need. Your language lead explains each grammatical construction in plain words.'],
-  ['How long does it take?', 'A batch of 25 templates takes about an hour, so a full 30-template assignment is roughly an hour and a quarter, split over as many sessions as you like. Five minutes is enough to write your first one.'],
+  ['How much do I need to write?', 'As much or as little as you like. A few sentences help; some people write hundreds. A batch of 25 templates takes about an hour. We need many speakers per language, so every contribution counts.'],
   ['What exactly do I write?', 'Pairs of sentences: one correct, and one that is wrong in exactly one grammatical way. We give you real sentences from your language for vocabulary; you write the grammar.'],
   ['Can I use AI tools or copy sentences?', 'No. Every template must come from a person\'s own knowledge of the language. That is the whole point: we are testing AI against human judgement.'],
   ['Will I be credited?', 'Yes. With your permission you are acknowledged by name in the paper and the dataset, from one batch. Substantial contributions (about 300 templates, agreed in advance) can lead to co-authorship.'],
-  ['My language is not listed.', `Tell us: ${CENTRAL_CONTACT.email}. New languages join through a language lead and a native-speaker coordinator.`],
+  ['My language is not listed.', `Add it! Email ${CENTRAL_CONTACT.email}. New languages join a later phase through a language lead and a native-speaker coordinator, and you can be either.`],
 ]
 
 export default function Home() {
-  const active = LANGUAGE_DATA.filter((l) => l.status === 'active').length
-  return (
+    return (
     <div className="m">
       {/* hero */}
       <section className="m-hero" aria-labelledby="hello">
         <div className="m-hero-inner">
-          <p className="m-eyebrow">Open research · University of Cambridge · {LANGUAGE_DATA.length} languages</p>
+          <p className="m-eyebrow">Open research · University of Cambridge · Phase 1 · {LANGUAGE_DATA.length} languages and growing</p>
           <h1 id="hello">Does AI really understand <span className="m-grad">your language?</span></h1>
           <p className="m-sub">AI sounds fluent. But does it know the rules? Help us find out, with the people who know each language best: its native speakers.</p>
           <div className="c-btns">
-            <a className="c-btn m-big" href="#/contribute">Bring your language into xBLiMPs</a>
+            <a className="c-btn m-big" href="#languages">Bring your language into xBLiMPs</a>
             <a className="c-btn ghost m-big" href="#quiz">Take the 30-second test</a>
           </div>
-          <p className="m-trust">No linguistics degree needed · About an hour for 30 templates · Credited by name</p>
+          <p className="m-trust">We're recruiting native speakers · Write a few sentences or hundreds · No linguistics degree needed · Credited by name</p>
         </div>
         <div className="m-marquee" aria-label="Project languages">
           <div className="m-track">
@@ -157,12 +150,12 @@ export default function Home() {
         <p className="m-eyebrow">How it works</p>
         <h2 id="how-h">We give you words. You write the grammar.</h2>
         <div className="m-steps">
-          <div><span>1</span><h3>Pick your language</h3><p>And the grammatical construction your language lead assigns, like subject–verb agreement.</p></div>
-          <div><span>2</span><h3>Grab some words</h3><p>We show you a real sentence from your language, with an English translation and words you can reuse.</p></div>
+          <div><span>1</span><h3>Pick your language</h3><p>Your language lead gives you a grammatical construction to work on, like subject–verb agreement.</p></div>
+          <div><span>2</span><h3>Grab some words</h3><p>The lexical generator shows you a real sentence from your language, with an English translation and words you can reuse.</p></div>
           <div><span>3</span><h3>Write a test</h3><p>A correct sentence and a version that is wrong in exactly one way. Use the words, not the sentence.</p></div>
-          <div><span>4</span><h3>Make it count</h3><p>30 templates, about 3 per grammatical area. Your lead reviews them, and they become part of an open benchmark.</p></div>
+          <div><span>4</span><h3>Make it count</h3><p>A few or hundreds: every test counts. Your lead reviews them, and they become part of an open benchmark.</p></div>
         </div>
-        <div className="c-btns" style={{ marginTop: 22 }}><a className="c-btn" href="#/contribute">Start writing</a></div>
+        <div className="c-btns" style={{ marginTop: 22 }}><a className="c-btn" href="#/generator">Open the lexical generator</a></div>
       </section>
 
       {/* what you get */}
@@ -190,42 +183,33 @@ export default function Home() {
         </div>
       </section>
 
-      {/* join */}
+      {/* people first */}
       <section className="c-section" aria-labelledby="join-h">
-        <p className="m-eyebrow">Get involved</p>
-        <h2 id="join-h">Lead it. Build it. Or just contribute.</h2>
-        <div className="m-tiers">
-          <div className="m-tier"><h3>Contribute</h3><p className="m-tier-time">5 minutes or more</p><p>Write a few templates, suggest a construction, or flag a sentence that sounds wrong.</p>
-            <a className="c-btn" href="#/contribute">Start now</a></div>
-          <div className="m-tier m-tier-hot"><span className="m-badge">Most needed</span><h3>Build a language</h3><p className="m-tier-time">30 templates · about an hour and a quarter</p>
-            <p>Join a core team of 3–8 speakers who write and review your language's main collection.</p>
-            <a className="c-btn" href={`mailto:${CENTRAL_CONTACT.email}?subject=${encodeURIComponent('xBLiMPs: join a core team')}`}>Join a team</a></div>
-          <div className="m-tier"><h3>Lead a language</h3><p className="m-tier-time">Ongoing</p><p>As a linguist (scientific lead) or a native-speaker coordinator (community lead).</p>
-            <a className="c-btn ghost" href={`mailto:${CENTRAL_CONTACT.email}?subject=${encodeURIComponent('xBLiMPs: lead or coordinate a language')}`}>Get in touch</a></div>
+        <p className="m-eyebrow">What can you do?</p>
+        <h2 id="join-h">You can be part of xBLiMPs, in whatever way suits you.</h2>
+        <YouCanBe />
+        <div className="m-newlang">
+          <div><h3>🌱 You can start a new language</h3>
+            <p>Is your language missing? Become its first lead or coordinator, and we'll help you bring it into the next phase of xBLiMPs.</p></div>
+          <a className="c-btn" href={`mailto:${CENTRAL_CONTACT.email}?subject=${encodeURIComponent('xBLiMPs: add my language')}`}>Add your language</a>
         </div>
       </section>
 
-      {/* urgency */}
-      <section className="m-band" aria-labelledby="deadline-h">
+      {/* phases */}
+      <section className="m-band" aria-labelledby="phases-h">
         <div>
-          <h2 id="deadline-h"><Countdown /> until the datasets close</h2>
-          <p>Every language needs about 1,000 templates by <b>11 December</b>, across 10 grammatical areas. The paper goes to ACL on 4 January 2027.</p>
+          <h2 id="phases-h">Built in phases, language by language, towards 182 BLiMPs.</h2>
+          <p>Phase 1 covers the languages below and the first xBLiMPs paper. Every phase adds new languages and new grammatical tests, so there is always room for yours.</p>
         </div>
-        <a className="c-btn m-big m-light" href="#/contribute">Help your language make it</a>
+        <a className="c-btn m-big m-light" href="#languages">Join a language</a>
       </section>
 
       {/* languages */}
       <section className="c-section" id="languages" aria-labelledby="langs-h">
-        <p className="m-eyebrow">{active} languages now · Basque in phase 2</p>
+        <p className="m-eyebrow">We're recruiting native speakers</p>
         <h2 id="langs-h">Choose your language</h2>
-        <div className="c-langs">
-          {LANGUAGE_DATA.map((l) => (
-            <a key={l.code} href={`#/contribute/${l.code}`} className={`c-lang${l.status === 'active' ? '' : ' off'}`}>
-              <b dir={l.dir} style={{ fontSize: 20 }}>{l.native}</b><span className="native">{l.name}</span>
-              <div className="state">{l.status === 'active' ? 'Contribute →' : 'Phase 2 · start →'}</div>
-            </a>
-          ))}
-        </div>
+        <p className="m-lede">Whether you can write a few sentences or hundreds, we need you. The more speakers per language, the richer the tests.</p>
+        <LanguageGrid to="generator" />
       </section>
 
       {/* faq */}
@@ -258,7 +242,7 @@ export default function Home() {
       <section className="m-final">
         <h2>Your language. Your knowledge. A global scientific project.</h2>
         <p>Help make AI accountable to the world's languages.</p>
-        <a className="c-btn m-big m-light" href="#/contribute">Bring your language into xBLiMPs</a>
+        <a className="c-btn m-big m-light" href="#/generator">Bring your language into xBLiMPs</a>
         <Share />
       </section>
     </div>

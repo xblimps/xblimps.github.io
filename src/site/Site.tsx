@@ -1,35 +1,35 @@
 // Public shell of https://xblimps.github.io/ (the canonical xBLiMPs site), in the CAFe theme (cafe.css).
-// Home (#/) is the mission and recruitment page. Contribute (#/contribute, #/contribute/<code>) is the contributor
-// workflow: language → construction → vocabulary from a real sentence → the contributor's own template. The lexical
-// generator was removed on 26 Nov 2026 (its engine lives on as central-team tooling in scripts/lexgen/). Four guide
-// pages follow. No sign-in, no backend. Older routes (#/generator, #/lang/<code>, #/guide/demo …) resolve to the page
-// that replaced them. The annotation platform (#/app) is admin-only and is not linked from here.
+// Home (#/) is the marketing and recruitment page. The lexical generator (#/generator, #/generator/<code>) gives a
+// random real sentence per language, with an English translation and words to reuse; that is all the public site does
+// for contributors (template writing is private, in the language sheets). Four guide pages follow. No sign-in, no
+// backend. Older routes (#/contribute, #/lang/<code>, #/check, #/guide/demo …) resolve to their replacements. The
+// annotation platform (#/app) is admin-only and is not linked from here.
 
 import React, { useEffect, useState } from 'react'
 import Home from './Home'
-import Contribute from './Contribute'
+import Generator from './Generator'
 import { Instructions, Lead, Native, Advice } from './guide/pages'
 import { byCode } from './languages'
 import './site.css'
 import './cafe.css'
 
-export type Page = '' | 'contribute' | 'guide' | 'guide/lead' | 'guide/native' | 'guide/advice'
+export type Page = '' | 'generator' | 'guide' | 'guide/lead' | 'guide/native' | 'guide/advice'
 // Older routes (shared in Slack and docs) resolve to the page that now holds their content.
 const ALIASES: Record<string, Page> = {
   'guide/write': 'guide/advice', 'guide/faq': 'guide/advice', 'guide/help': 'guide/advice',
   'guide/handover': 'guide/lead', 'guide/instructions': 'guide', 'guide/demo': 'guide/native',
-  // the generator (removed 26 Nov 2026) and its aliases now open the contribution workflow
-  generator: 'contribute', check: 'contribute', wand: 'contribute',
+  // the old slot generator's aliases and the short-lived Contribute page open the lexical generator
+  contribute: 'generator', check: 'generator', wand: 'generator',
 }
 export type Route = Page
-export const SITE_ROUTES: string[] = ['', 'contribute', 'guide', 'guide/lead', 'guide/native', 'guide/advice', ...Object.keys(ALIASES)]
-const langOf = (h: string) => (h.startsWith('contribute/') ? h.slice(11) : h.startsWith('lang/') ? h.slice(5) : null)
+export const SITE_ROUTES: string[] = ['', 'generator', 'guide', 'guide/lead', 'guide/native', 'guide/advice', ...Object.keys(ALIASES)]
+const langOf = (h: string) => { const m = h.match(/^(?:generator|contribute|lang)\/([a-z]{2})$/); return m ? m[1] : null }
 export const isSiteRoute = (h: string) => SITE_ROUTES.includes(h) || (!!langOf(h) && !!byCode(langOf(h)!))
 export const resolveRoute = (r: string): Page => (ALIASES[r] ?? (r as Page))
 
 const NAV: [string, string][] = [
   ['', 'Home'],
-  ['contribute', 'Contribute'],
+  ['generator', 'Lexical generator'],
   ['guide', 'Instructions'],
   ['guide/lead', "I'm a Language Lead"],
   ['guide/native', "I'm a Native Speaker"],
@@ -37,7 +37,7 @@ const NAV: [string, string][] = [
 ]
 
 const TITLES: Record<Page, string> = {
-  '': 'Does AI really understand your language?', contribute: 'Contribute', guide: 'Instructions', 'guide/lead': "I'm a Language Lead",
+  '': 'Does AI really understand your language?', generator: 'Lexical generator', guide: 'Instructions', 'guide/lead': "I'm a Language Lead",
   'guide/native': "I'm a Native Speaker", 'guide/advice': 'Advice',
 }
 
@@ -56,7 +56,7 @@ export default function Site({ route: raw }: { route: string }) {
     window.scrollTo(0, 0)
   }, [route, lang])
 
-  const active = (r: string) => (lang ? r === 'contribute' : route === r)
+  const active = (r: string) => (lang ? r === 'generator' : route === r)
 
   return (
     <div className="site cafe" data-theme={theme ?? undefined}>
@@ -78,9 +78,9 @@ export default function Site({ route: raw }: { route: string }) {
       </header>
 
       <main className="site-main" id="main">
-        {lang && <Contribute code={lang} />}
+        {lang && <Generator code={lang} />}
         {route === '' && <Home />}
-        {route === 'contribute' && <Contribute code={null} />}
+        {route === 'generator' && <Generator code={null} />}
         {route === 'guide' && <Instructions />}
         {route === 'guide/lead' && <Lead />}
         {route === 'guide/native' && <Native />}
@@ -91,7 +91,7 @@ export default function Site({ route: raw }: { route: string }) {
         <div className="site-foot-inner">
           <span>xBLiMPs · Cambridge · ACL 2027 dataset · Afrikaans, Catalan, English, French, Persian, Spanish, Tagalog, Welsh (Basque in phase 2)</span>
           <span>No AI-generated templates, words or sentences. We give you words; you write the grammar.</span>
-          <span>Vocabulary samples: FineWeb-2 / FineWeb (ODC-By 1.0), English machine translations by Helsinki-NLP opus-mt (Apache-2.0). Design after the CAFe project site (developerFolio).</span>
+          <span>Vocabulary samples: FineWeb-2 / FineWeb (ODC-By 1.0), English machine translations by Helsinki-NLP opus-mt (Apache-2.0) and, for Persian, Meta NLLB-200 (CC-BY-NC 4.0). Design after the CAFe project site (developerFolio).</span>
         </div>
       </footer>
     </div>

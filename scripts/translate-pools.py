@@ -10,7 +10,8 @@ untranslated sentence and never waits on a live translation call.
   python3 scripts/translate-pools.py                  # every pool, 400 sentences each
   python3 scripts/translate-pools.py cy fr --n 200
 
-Models: Helsinki-NLP opus-mt-<src>-en (Apache-2.0). Persian has no dedicated model, so it uses opus-mt-mul-en. English
+Models: Helsinki-NLP opus-mt-<src>-en (Apache-2.0); Persian uses facebook/nllb-200-distilled-600M (CC-BY-NC 4.0),
+because the multilingual opus-mt models hallucinate on Persian. English
 pools need no translation. Each pool records the model it used, and the site labels translations "machine translation".
 Vocabulary chips are a transparent heuristic, not a tagger: the longest distinct words (≥4 letters, ≥3 for Persian)
 that are not on a short per-language function-word list
@@ -21,7 +22,9 @@ import json, re, sys, random
 from pathlib import Path
 
 MODELS = {"af": "opus-mt-af-en", "eu": "opus-mt-eu-en", "ca": "opus-mt-ca-en", "fr": "opus-mt-fr-en",
-          "es": "opus-mt-es-en", "tl": "opus-mt-tl-en", "cy": "opus-mt-cy-en", "fa": "opus-mt-mul-en"}
+          "es": "opus-mt-es-en", "tl": "opus-mt-tl-en", "cy": "opus-mt-cy-en"}
+# Persian and Welsh: the opus-mt models hallucinate (checked 26 Nov 2026), so NLLB-200 (CC-BY-NC 4.0).
+NLLB = {"fa": ("facebook/nllb-200-distilled-600M", "pes_Arab"), "cy": ("facebook/nllb-200-distilled-600M", "cym_Latn")}
 
 # Short function-word lists (articles, pronouns, auxiliaries, prepositions, conjunctions). Content words remain.
 STOP = {
@@ -59,7 +62,23 @@ def same_text(src: str, en: str) -> bool:
     return bool(a) and sum(w in b for w in a) / len(a) >= 0.6
 
 
+def model_name(code: str) -> str:
+    return NLLB[code][0] if code in NLLB else f"Helsinki-NLP/{MODELS[code]}"
+
+
 def translate(code: str, sents: list[str], batch: int = 16) -> list[str]:
+    if code in NLLB:
+        from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
+        name, src = NLLB[code]
+        tok = AutoTokenizer.from_pretrained(name, src_lang=src)
+        model = AutoModelForSeq2SeqLM.from_pretrained(name)
+        eng = tok.convert_tokens_to_ids("eng_Latn")
+        out = []
+        for i in range(0, len(sents), batch):
+            enc = tok(sents[i:i + batch], return_tensors="pt", padding=True, truncation=True, max_length=128)
+            out += tok.batch_decode(model.generate(**enc, forced_bos_token_id=eng, num_beams=2, max_new_tokens=128), skip_special_tokens=True)
+            print(f"  {code}: {len(out)}/{len(sents)}", end="\r", flush=True)
+        return out
     from transformers import MarianMTModel, MarianTokenizer
     name = f"Helsinki-NLP/{MODELS[code]}"
     tok = MarianTokenizer.from_pretrained(name)
@@ -90,7 +109,7 @@ def main() -> int:
         if code == "en":
             trans, model = [x["s"] for x in pool], None
         else:
-            trans, model = translate(code, [x["s"] for x in pool]), f"Helsinki-NLP/{MODELS[code]}"
+            trans, model = translate(code, [x["s"] for x in pool]), model_name(code)
         kept = []
         for x, t in zip(pool, trans):
             t = (t or "").strip()

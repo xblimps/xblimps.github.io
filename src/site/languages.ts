@@ -1,5 +1,5 @@
 // One record per project language: the data behind the language cards and each language's contribution workspace
-// (#/contribute/<code>), including its four-layer team (lead, coordinator, core team, open community). Leads and the central team update this file (and only this file) when a
+// lexical-generator page (#/generator/<code>), where it recruits people in every role ("You can be…"). Leads and the central team update this file (and only this file) when a
 // lead, a channel or a status changes; the pages render from it.
 //
 // Lead names and contact routes are published only once the lead has agreed. Until then `lead` is null and the

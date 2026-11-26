@@ -19,7 +19,7 @@ export const SOURCES = {
   ca: { dataset: 'HuggingFaceFW/fineweb-2', config: 'cat_Latn' },
   en: { dataset: 'HuggingFaceFW/fineweb', config: 'sample-10BT' },
   fr: { dataset: 'HuggingFaceFW/fineweb-2', config: 'fra_Latn' },
-  fa: { dataset: 'HuggingFaceFW/fineweb-2', config: 'pes_Arab' },
+  fa: { dataset: 'HuggingFaceFW/fineweb-2', config: 'fas_Arab' },
   es: { dataset: 'HuggingFaceFW/fineweb-2', config: 'spa_Latn' },
   tl: { dataset: 'HuggingFaceFW/fineweb-2', config: 'fil_Latn' },   // FineWeb-2 files Tagalog/Filipino as fil_Latn
   cy: { dataset: 'HuggingFaceFW/fineweb-2', config: 'cym_Latn' },

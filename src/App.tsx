@@ -22,14 +22,14 @@ function PublicOnly({ name, onSignOut }: { name: string; onSignOut: () => void }
     <div className="app" style={{ gridTemplateColumns: '64px 1fr' }}>
       <div className="spine">
         <div className="spine-logo">x</div>
-        <a className="spine-btn" title="Contribute on the public site" href="#/contribute" style={{ textDecoration: 'none', display: 'grid', placeItems: 'center' }}>🪄</a>
+        <a className="spine-btn" title="Lexical generator" href="#/generator" style={{ textDecoration: 'none', display: 'grid', placeItems: 'center' }}>🪄</a>
       </div>
       <div className="main">
         <div className="empty" style={{ maxWidth: 520, margin: '12vh auto', textAlign: 'center' }}>
           <div className="big">🪄</div>
-          <p>Signed in as <b>{name}</b>. xBLiMPs work now happens on the public site: the Contribute page, with the instructions,
+          <p>Signed in as <b>{name}</b>. xBLiMPs work now happens on the public site: the lexical generator, with the instructions,
             the language-lead and native-speaker pages and advice.</p>
-          <p><a className="btn btn-primary" href="#/contribute">Open Contribute</a></p>
+          <p><a className="btn btn-primary" href="#/generator">Open the lexical generator</a></p>
           <p><button className="btn btn-ghost btn-sm" onClick={onSignOut}>Sign out</button></p>
         </div>
       </div>
@@ -47,7 +47,7 @@ export default function App() {
 
   // The annotation platform is admin-only (Suchir). Everyone else — leads, native speakers,
   // reviewers — gets the public site (https://xblimps.github.io/): the only icon they see is the
-  // wand, which opens the Contribute page. This is the route guard for every module below
+  // wand, which opens the lexical generator. This is the route guard for every module below
   // (board, xBLiMPs workspaces, forge, bench, CHILDES, team, audit), not just hidden buttons.
   const admin = isAdmin(profile)
   if (!admin) return <PublicOnly name={profile.name} onSignOut={signOutNow} />
@@ -68,7 +68,7 @@ export default function App() {
       <div className="spine">
         <div className="spine-logo">x</div>
         {/* back to the public site: Contribute + instructions (the principal tools) */}
-        <a className="spine-btn" title="Public site: Contribute & instructions" href="#/" style={{ textDecoration: 'none', display: 'grid', placeItems: 'center' }}>📘</a>
+        <a className="spine-btn" title="Public site: lexical generator & instructions" href="#/" style={{ textDecoration: 'none', display: 'grid', placeItems: 'center' }}>📘</a>
         {!onlyForge && <button className={`spine-btn ${nav.view === 'board' ? 'active' : ''}`} title="Completion board" onClick={() => go({ view: 'board' })}>🏁</button>}
         {!onlyForge && <button className={`spine-btn ${inXblimps ? 'active' : ''}`} title="xBLiMPs minimal pairs" onClick={() => go({ view: 'xblimps', workspaceId: null, section: 'Home' })}>🔤</button>}
         <button className={`spine-btn ${nav.view === 'forge' ? 'active' : ''}`} title="Minimal-pair forge" onClick={() => go({ view: 'forge' })}>🪄</button>
