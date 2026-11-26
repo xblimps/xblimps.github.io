@@ -4,7 +4,7 @@ import {
   analyse, demoTemplate, expandAll, pairsToDelimited, parseCSV, splitAlternatives,
   templateFromText, templateToTSV, DEFAULT_OPTIONS, HARD_CAP,
   sheetToTemplates, samplePairs, parseTSV, manyToDelimited, dedupePairs, repeatedWords, findContradictions,
-} from '../src/lib/lexgen'
+} from './lexgen'
 
 let n = 0
 const test = (name: string, fn: () => void) => { fn(); n++; console.log(`ok ${n} - ${name}`) }

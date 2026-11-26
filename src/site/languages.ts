@@ -1,5 +1,5 @@
-// One record per project language: the data behind the language cards on the home page and each language's
-// contribution page (#/lang/<code>). Leads and the central team update this file (and only this file) when a
+// One record per project language: the data behind the language cards and each language's contribution workspace
+// (#/contribute/<code>), including its four-layer team (lead, coordinator, core team, open community). Leads and the central team update this file (and only this file) when a
 // lead, a channel or a status changes; the pages render from it.
 //
 // Lead names and contact routes are published only once the lead has agreed. Until then `lead` is null and the
@@ -22,7 +22,8 @@ export interface Language {
   script: 'Latin' | 'Arabic'
   dir?: 'rtl'
   status: LangStatus
-  leads: Lead[] | null     // null = not confirmed for publication yet
+  leads: Lead[] | null     // Layer 1, scientific owner(s); null = not confirmed for publication yet
+  coordinator?: Lead | null // Layer 2, native-speaker community coordinator; absent = recruiting
   channel?: string         // per-language Slack channel, when one exists
   notes?: string[]         // language-specific guidance from the lead (short, plain language)
 }

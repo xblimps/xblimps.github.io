@@ -11,7 +11,7 @@ const AppShell = lazy(() => import('./AppShell').catch((e) => {
   throw e
 }))
 
-// Routing: the public site (lexical generator + five guide pages) is the default and is all that
+// Routing: the public site (home, Contribute + four guide pages) is the default and is all that
 // contributors see. The annotation platform lives at #/app and is admin-only: App.tsx shows its
 // modules only when isAdmin(profile). Requests carrying the platform's own URL parameters (email
 // sign-in links, ?demo= / ?go= / ?lang= local previews) still open the platform directly.

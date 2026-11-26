@@ -42,7 +42,7 @@ export default function Login() {
           <div className="spine-logo" style={{ margin: '0 auto 16px', width: 54, height: 54, fontSize: 24, borderRadius: 16 }}>x</div>
           <h1 style={{ margin: 0, fontSize: 26, letterSpacing: '-0.02em' }}>xBLiMPs</h1>
           <p className="muted" style={{ marginTop: 6 }}>Multilingual grammatical test-suite platform</p>
-          <p style={{ marginTop: 10, fontSize: 13.5 }}><a href="#/">← Lexical generator &amp; instructions</a> (no sign-in needed; this sign-in is for the site admin)</p>
+          <p style={{ marginTop: 10, fontSize: 13.5 }}><a href="#/contribute">← Contribute &amp; instructions</a> (no sign-in needed; this sign-in is for the site admin)</p>
         </div>
 
         <div className="card" style={{ padding: 24 }}>

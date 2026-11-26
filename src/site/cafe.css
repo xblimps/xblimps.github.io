@@ -181,3 +181,33 @@
   .cafe:not([data-theme='light']) .c-btn, .cafe:not([data-theme='light']) .site-nav a.active { color: #171c28; }
   .cafe:not([data-theme='light']) .c-btn.ghost { color: var(--c-accent); }
 }
+
+/* contribute: vocabulary scaffold, chips, assignment */
+.c-sample { font-size: 18px; line-height: 1.55; margin: 12px 0 6px; padding: 14px 16px; border-radius: 12px; background: var(--c-bg-soft); color: var(--c-ink-soft); }
+.c-en { margin: 4px 0 0; font-size: 15px; line-height: 1.5; color: var(--c-ink); }
+.c-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.c-chip { font: inherit; font-size: 15px; font-weight: 600; padding: 7px 14px; border-radius: 999px; border: 1.5px solid var(--c-accent-2);
+  background: var(--c-accent-soft); color: var(--c-accent); cursor: pointer; }
+.c-chip:hover { border-color: var(--c-accent); }
+.c-chip.static { cursor: default; font-size: 13px; padding: 3px 10px; margin: 0 4px 4px 0; display: inline-block; }
+.c-check { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--c-ink-soft); align-self: center; }
+.c-bar { height: 12px; border-radius: 999px; background: var(--c-bg-soft); overflow: hidden; margin: 6px 0 16px; border: 1px solid var(--c-line); }
+.c-bar span { display: block; height: 100%; background: linear-gradient(90deg, var(--c-accent), var(--c-accent-3)); border-radius: 999px; }
+.c-areas { display: grid; gap: 8px; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+.c-area { display: flex; justify-content: space-between; gap: 10px; padding: 9px 12px; border-radius: 10px; border: 1px solid var(--c-line); font-size: 13.5px; }
+.c-area span { color: var(--c-ink-soft); }
+.c-area.full { border-color: var(--c-good); background: var(--c-good-soft); }
+.c-area.full b { color: var(--c-good); }
+.c-stats { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); }
+.c-stat { background: var(--c-card); border: 1px solid var(--c-line); border-radius: var(--c-radius); padding: 18px; }
+.c-stat b { display: block; font-size: 34px; line-height: 1.1; color: var(--c-accent); }
+.c-stat span { font-size: 13.5px; color: var(--c-ink-soft); }
+.c-callout { border: 2px solid var(--c-accent-2); border-radius: var(--c-radius); padding: 18px 22px; background: var(--c-accent-soft); }
+.c-callout h3 { margin: 0 0 6px; }
+/* narrow screens: one scrollable nav row instead of a tall wrapped column */
+@media (max-width: 760px) {
+  .cafe .site-head-inner { flex-wrap: wrap; }
+  .cafe .site-nav { order: 3; flex: 1 0 100%; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+  .cafe .site-nav a { white-space: nowrap; }
+  .cafe .site-brand .sig small { display: none; }
+}
