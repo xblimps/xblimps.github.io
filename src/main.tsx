@@ -1,6 +1,6 @@
 import React, { Suspense, lazy, useEffect, useState } from 'react'
 import ReactDOM from 'react-dom/client'
-import Site, { SITE_ROUTES } from './site/Site'
+import Site, { isSiteRoute } from './site/Site'
 import './styles/theme.css'
 
 // After a redeploy an open tab may ask for an old chunk name; reload once to pick up the new build.
@@ -23,7 +23,7 @@ const wantsApp = () => {
 const parse = (): string => {
   const h = window.location.hash.replace(/^#\/?/, '').replace(/\/$/, '')
   if (h === 'app' || h.startsWith('app/')) return 'app'
-  if (SITE_ROUTES.includes(h)) return h
+  if (isSiteRoute(h)) return h
   return ''
 }
 

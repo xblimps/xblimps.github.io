@@ -229,7 +229,7 @@ export function LexicalVariety() {
       <b>Lexical variety</b>
       <p style={{ margin: '6px 0 0' }}>
         Avoid reusing the same word across templates. The French pilot leaned heavily on <i>fatiguée</i>, and reading the same word in pair after pair tires native-speaker
-        reviewers and weakens the dataset. Vary the people, objects, verbs and situations from one template to the next. The <a href="#/">sheet check</a> lists the words that
+        reviewers and weakens the dataset. Vary the people, objects, verbs and situations from one template to the next. The <a href="#/generator">sheet check</a> lists the words that
         appear in the most templates of a tab, and the generator removes repeated pairs before you download them.
       </p>
     </div>
