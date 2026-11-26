@@ -21,7 +21,7 @@ export function Instructions() {
       <p className="lede">
         xBLiMPs is a crowd-built, multilingual benchmark of minimal pairs in the style of BLiMP: pairs of sentences that are
         identical except for one place, where one sentence is grammatical (✓) and the other is not (✗). Language leads design
-        slot patterns; native speakers write templates under them; the <a href="#/">lexical generator</a> turns each template into minimal pairs.
+        slot patterns; native speakers write templates under them; the <a href="#/generator">lexical generator</a> turns each template into minimal pairs.
         This site is the one place for the instructions, for every project language.
       </p>
 
@@ -103,7 +103,7 @@ export function Lead() {
         <li><b>Write the header row.</b> One plain label per slot (for example <span className="mono">{PROMPT_HEAD.slice(0, 4).join(' ')}</span>), then the ✓ slot and its ✗ partner: <span className="mono">{PROMPT_HEAD[4]}</span> and <span className="mono">{PROMPT_HEAD[5]}</span>.</li>
         <li><b>One slot carries the contrast,</b> and the ungrammaticality targets the phenomenon only.</li>
         <li><b>Gender and number:</b> one general slot pattern with gender or number varying between rows (each row internally consistent), or separate slot patterns per configuration. Both are fine; choose what fits the grammar.</li>
-        <li><b>Write the first templates yourself,</b> with 3–4 alternatives in every varying slot, and run them through the <a href="#/">lexical generator</a>. Read every pair.</li>
+        <li><b>Write the first templates yourself,</b> with 3–4 alternatives in every varying slot, and run them through the <a href="#/generator">lexical generator</a>. Read every pair.</li>
         <li><b>Validate the slot pattern</b> before contributors use it.</li>
       </ol>
       <PromptTemplateTable />
@@ -126,7 +126,7 @@ export function Lead() {
         <li>Review <b>flagged templates</b> and a <b>sample</b> of each contributor's templates. Automatic checks, deduplication and filtering run centrally.</li>
         <li>Check each sampled template: semantically coherent, every combination natural, ✗ wrong only for the phenomenon, row-internal gender/number consistency, no new structure, varied vocabulary, nothing offensive, copied or AI-generated.</li>
         <li>Decide on contributors' ideas for new structures. If a slot pattern is impossible to complete in your language, fix the slot pattern, not the templates.</li>
-        <li>Use the <a href="#/">sheet check</a> on each tab: it counts templates against the targets and lists words repeated across many templates.</li>
+        <li>Use the <a href="#/generator">sheet check</a> on each tab: it counts templates against the targets and lists words repeated across many templates.</li>
         <li>Do the <b>final linguistic validation</b> before 11 Dec.</li>
       </ul>
 
@@ -169,7 +169,7 @@ export function Native() {
         <li><b>Read the information sheet.</b> Your language lead will tell you if you need to fill in any paperwork.</li>
         <li><b>Get your sheet and slot pattern</b> from your language lead, with their instructions.</li>
         <li><b>Write templates.</b> Each template is one row with 3–4 alternatives in every varying slot, including the ✓ / ✗ slot. A batch is 25 templates (about an hour).</li>
-        <li><b>Check them in the <a href="#/">generator</a>.</b> Read every generated pair; each one must sound natural to you.</li>
+        <li><b>Check them in the <a href="#/generator">generator</a>.</b> Read every generated pair; each one must sound natural to you.</li>
         <li><b>Flag problems</b> instead of working around them (see below).</li>
         <li><b>Put your name next to your templates</b> in the sheet, so your work is credited.</li>
       </ol>
@@ -227,7 +227,7 @@ export function ContributorReturn() {
   return (
     <ul>
       <li>☐ Templates under the assigned slot patterns, 3–4 alternatives in every varying slot, structure and ✓ / ✗ contrast unchanged.</li>
-      <li>☐ Every generated pair read for naturalness (the <a href="#/">generator</a> lists them).</li>
+      <li>☐ Every generated pair read for naturalness (the <a href="#/generator">generator</a> lists them).</li>
       <li>☐ Varied vocabulary across templates.</li>
       <li>☐ Flags for anything confusing, unnatural or impossible, with the row and a one-line reason.</li>
       <li>☐ Name next to each template.</li>
@@ -239,7 +239,7 @@ export function ClosingLoop() {
   return (
     <ol className="steps">
       <li>Resolve the flags: fix the slot pattern if it is the problem, or explain how to fill it.</li>
-      <li>Review a sample of templates for consistency (not every routine row), and run the <a href="#/">sheet check</a> on the tab.</li>
+      <li>Review a sample of templates for consistency (not every routine row), and run the <a href="#/generator">sheet check</a> on the tab.</li>
       <li>Record contributors and batches in the project's contributor spreadsheet.</li>
       <li>Final linguistic validation before 11 Dec.</li>
     </ol>
@@ -273,7 +273,7 @@ export function Demo() {
         One slot pattern followed from the lead's design, through one template, through the generator, to the minimal pairs a native speaker checks.
         The example is the human-written English reference row for BLiMP <span className="mono">distractor_agree_rc</span> (subject–verb agreement
         across a relative clause with a plural “distractor” noun). Every number on this page is computed live by the same code as
-        the <a href="#/">generator</a>. The steps are identical in every project language; only the words change.
+        the <a href="#/generator">generator</a>. The steps are identical in every project language; only the words change.
       </p>
 
       <h2>Step 1 · The lead designs the slot pattern</h2>

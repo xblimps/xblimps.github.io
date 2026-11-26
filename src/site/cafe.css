@@ -1,0 +1,183 @@
+/* CAFe theme for the public site (design reference: https://ca-fe-folio.vercel.app, itself built on developerFolio).
+   Montserrat, a purple accent, generous whitespace, cards, a friendly hero, a light/dark toggle.
+   Scoped to .cafe so the admin platform (#/app) keeps its own notebook theme. */
+
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Caveat:wght@600&display=swap');
+
+.cafe {
+  --c-bg: #ffffff;
+  --c-bg-soft: #f5f2f4;
+  --c-card: #ffffff;
+  --c-ink: #171c28;
+  --c-ink-soft: #4a4f5a;
+  --c-ink-faint: #868e96;
+  --c-line: #e4e1e6;
+  --c-accent: #55198b;
+  --c-accent-2: #8c43ce;
+  --c-accent-3: #645beb;
+  --c-accent-soft: #f1e8fa;
+  --c-good: #1f7a4d;
+  --c-good-soft: #e6f4ec;
+  --c-bad: #b3261e;
+  --c-bad-soft: #fbe9e7;
+  --c-shadow: 0 10px 30px -12px rgba(85, 25, 139, .25);
+  --c-radius: 16px;
+  font-family: 'Montserrat', system-ui, sans-serif;
+  background: var(--c-bg);
+  color: var(--c-ink);
+}
+.cafe[data-theme='dark'] {
+  --c-bg: #171c28;
+  --c-bg-soft: #1f2535;
+  --c-card: #232a3b;
+  --c-ink: #f2f2f5;
+  --c-ink-soft: #c9cbd3;
+  --c-ink-faint: #9aa0ab;
+  --c-line: #343c50;
+  --c-accent: #b58cf0;
+  --c-accent-2: #c9a6f7;
+  --c-accent-3: #9c95ff;
+  --c-accent-soft: #2e2546;
+  --c-good: #6fd3a0;
+  --c-good-soft: #1d3a2d;
+  --c-bad: #ff9b91;
+  --c-bad-soft: #43231f;
+  --c-shadow: 0 10px 30px -12px rgba(0, 0, 0, .6);
+}
+@media (prefers-color-scheme: dark) {
+  .cafe:not([data-theme='light']) {
+    --c-bg: #171c28; --c-bg-soft: #1f2535; --c-card: #232a3b; --c-ink: #f2f2f5; --c-ink-soft: #c9cbd3;
+    --c-ink-faint: #9aa0ab; --c-line: #343c50; --c-accent: #b58cf0; --c-accent-2: #c9a6f7; --c-accent-3: #9c95ff;
+    --c-accent-soft: #2e2546; --c-good: #6fd3a0; --c-good-soft: #1d3a2d; --c-bad: #ff9b91; --c-bad-soft: #43231f;
+    --c-shadow: 0 10px 30px -12px rgba(0, 0, 0, .6);
+  }
+}
+
+/* shell */
+.cafe .site-head { background: color-mix(in srgb, var(--c-bg) 92%, transparent); border-bottom: 1px solid var(--c-line); }
+.cafe .site-brand { color: var(--c-ink); }
+.cafe .site-brand .sig { font-family: 'Caveat', cursive; font-size: 30px; color: var(--c-accent-3); line-height: 1; }
+.cafe .site-brand .sig small { font-family: 'Montserrat', sans-serif; font-size: 12px; color: var(--c-ink-faint); margin-left: 4px; }
+.cafe .site-nav a { color: var(--c-ink-soft); font-weight: 500; border-radius: 999px; }
+.cafe .site-nav a:hover { background: var(--c-accent-soft); color: var(--c-ink); }
+.cafe .site-nav a.active { background: var(--c-accent); color: #fff; }
+.cafe .theme-toggle { margin-left: auto; border: 1px solid var(--c-line); background: var(--c-card); color: var(--c-ink); border-radius: 999px;
+  padding: 6px 12px; font: inherit; font-size: 13px; cursor: pointer; }
+.cafe .site-main { color: var(--c-ink); }
+.cafe .site-foot { border-top: 1px solid var(--c-line); color: var(--c-ink-faint); background: var(--c-bg-soft); }
+.cafe .site-foot a { color: var(--c-accent); }
+.cafe a { color: var(--c-accent); }
+.cafe :focus-visible { outline: 3px solid var(--c-accent-3); outline-offset: 2px; border-radius: 6px; }
+
+/* hero (CAFe "greeting") */
+.c-hero { display: grid; grid-template-columns: 1.15fr .85fr; gap: 40px; align-items: center; padding: 36px 0 28px; }
+.c-hero h1 { font-size: clamp(32px, 5vw, 56px); line-height: 1.08; letter-spacing: -.02em; margin: 0 0 18px; font-weight: 700; }
+.c-hero p.lead { font-size: 18px; line-height: 1.65; color: var(--c-ink-soft); margin: 0 0 18px; max-width: 620px; }
+.c-hero .bullets { list-style: none; padding: 0; margin: 0 0 22px; color: var(--c-ink-soft); font-size: 14.5px; line-height: 1.9; }
+.c-hero-art { aspect-ratio: 1; border-radius: 32px; background: radial-gradient(circle at 30% 25%, var(--c-accent-soft), transparent 60%),
+  linear-gradient(145deg, var(--c-bg-soft), var(--c-card)); border: 1px solid var(--c-line); display: grid; place-items: center; padding: 24px; }
+.c-pair { width: 100%; max-width: 360px; display: grid; gap: 12px; }
+.c-pair div { background: var(--c-card); border-radius: 14px; padding: 14px 16px; box-shadow: var(--c-shadow); font-size: 15px; line-height: 1.4; }
+.c-pair .g { border-left: 5px solid var(--c-good); }
+.c-pair .b { border-left: 5px solid var(--c-bad); }
+.c-pair mark { background: var(--c-accent-soft); color: inherit; padding: 0 3px; border-radius: 4px; }
+@media (max-width: 860px) { .c-hero { grid-template-columns: 1fr; } .c-hero-art { max-width: 420px; } }
+
+/* buttons */
+.c-btns { display: flex; gap: 12px; flex-wrap: wrap; }
+.c-btn { display: inline-flex; align-items: center; gap: 8px; padding: 12px 20px; border-radius: 999px; font: inherit; font-weight: 600;
+  font-size: 14px; letter-spacing: .02em; text-transform: uppercase; cursor: pointer; text-decoration: none; border: 2px solid var(--c-accent);
+  background: var(--c-accent); color: #fff; transition: transform .12s ease, box-shadow .12s ease; }
+.c-btn:hover { transform: translateY(-1px); box-shadow: var(--c-shadow); color: #fff; }
+.c-btn.ghost { background: transparent; color: var(--c-accent); }
+.c-btn.small { padding: 8px 14px; font-size: 12.5px; }
+.c-btn:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+
+/* sections */
+.c-section { padding: 52px 0 8px; }
+.c-section > h2 { font-size: clamp(26px, 3.4vw, 38px); margin: 0 0 6px; letter-spacing: -.01em; }
+.c-section > .kicker { text-transform: uppercase; letter-spacing: .08em; font-size: 13px; color: var(--c-ink-faint); margin: 0 0 24px; }
+.c-grid { display: grid; gap: 18px; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+.c-card { background: var(--c-card); border: 1px solid var(--c-line); border-radius: var(--c-radius); padding: 20px 22px; box-shadow: var(--c-shadow); }
+.c-card h3 { margin: 4px 0 8px; font-size: 18px; }
+.c-card p { margin: 0; color: var(--c-ink-soft); line-height: 1.6; font-size: 14.5px; }
+.c-card .tag { display: inline-block; font-size: 11.5px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--c-accent); }
+
+/* language picker */
+.c-search { width: 100%; max-width: 460px; padding: 13px 18px; border-radius: 999px; border: 1.5px solid var(--c-line); background: var(--c-card);
+  color: var(--c-ink); font: inherit; font-size: 15px; margin: 0 0 20px; }
+.c-search:focus { border-color: var(--c-accent-3); outline: none; }
+.c-langs { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
+.c-lang { display: block; text-decoration: none; color: var(--c-ink); background: var(--c-card); border: 1.5px solid var(--c-line);
+  border-radius: var(--c-radius); padding: 18px; transition: border-color .12s ease, transform .12s ease; }
+.c-lang:hover { border-color: var(--c-accent-2); transform: translateY(-2px); color: var(--c-ink); }
+.c-lang b { display: block; font-size: 17px; }
+.c-lang .native { color: var(--c-ink-faint); font-size: 14px; }
+.c-lang .state { margin-top: 10px; font-size: 12px; color: var(--c-accent); font-weight: 600; }
+.c-lang.off { opacity: .65; }
+
+/* contribution workflow */
+.c-steps { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0 26px; padding: 0; list-style: none; }
+.c-steps li { display: flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 999px; background: var(--c-bg-soft); color: var(--c-ink-soft);
+  font-size: 13.5px; font-weight: 600; }
+.c-steps li .n { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; background: var(--c-line); font-size: 12px; }
+.c-steps li.done .n { background: var(--c-good); color: #fff; }
+.c-steps li.now { background: var(--c-accent-soft); color: var(--c-accent); }
+.c-steps li.now .n { background: var(--c-accent); color: #fff; }
+.c-two { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; align-items: start; }
+@media (max-width: 920px) { .c-two { grid-template-columns: 1fr; } }
+
+.c-quote { border-left: 4px solid var(--c-accent-2); background: var(--c-bg-soft); border-radius: 10px; padding: 12px 16px; margin: 10px 0;
+  font-size: 16px; line-height: 1.55; }
+.c-quote .src { display: block; font-size: 12px; color: var(--c-ink-faint); margin-top: 6px; word-break: break-all; }
+.c-quote.pinned { border-left-color: var(--c-accent-3); background: var(--c-accent-soft); }
+
+.c-field { display: grid; gap: 6px; margin: 0 0 14px; }
+.c-field label { font-weight: 600; font-size: 13.5px; }
+.c-field .help { font-size: 12.5px; color: var(--c-ink-faint); line-height: 1.5; }
+.c-field input, .c-field textarea, .c-field select { font: inherit; font-size: 14.5px; padding: 10px 12px; border-radius: 10px; border: 1.5px solid var(--c-line);
+  background: var(--c-card); color: var(--c-ink); }
+.c-field textarea { min-height: 70px; resize: vertical; }
+.c-field input:focus, .c-field textarea:focus, .c-field select:focus { border-color: var(--c-accent-3); outline: none; }
+.c-slots { display: grid; gap: 10px; }
+.c-slot { display: grid; grid-template-columns: 150px 1fr; gap: 10px; align-items: center; }
+.c-slot .lbl { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; padding: 8px 10px; border-radius: 8px; background: var(--c-bg-soft); }
+.c-slot.good .lbl { background: var(--c-good-soft); color: var(--c-good); }
+.c-slot.bad .lbl { background: var(--c-bad-soft); color: var(--c-bad); }
+@media (max-width: 560px) { .c-slot { grid-template-columns: 1fr; } }
+
+.c-issues { list-style: none; padding: 0; margin: 10px 0; display: grid; gap: 6px; font-size: 13.5px; }
+.c-issues li { padding: 8px 12px; border-radius: 8px; }
+.c-issues .error { background: var(--c-bad-soft); color: var(--c-bad); }
+.c-issues .warning { background: #fff4e0; color: #8a5300; }
+.cafe[data-theme='dark'] .c-issues .warning { background: #3a2f17; color: #f2c56b; }
+.c-issues .note, .c-issues .ok { background: var(--c-good-soft); color: var(--c-good); }
+.c-pairs { width: 100%; border-collapse: collapse; font-size: 14px; }
+.c-pairs td { padding: 7px 8px; border-bottom: 1px solid var(--c-line); vertical-align: top; }
+.c-pairs td.g::before { content: '✓ '; color: var(--c-good); font-weight: 700; }
+.c-pairs td.b::before { content: '✗ '; color: var(--c-bad); font-weight: 700; }
+.c-saved { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
+.c-saved li { display: flex; gap: 10px; align-items: center; justify-content: space-between; padding: 10px 12px; border: 1px solid var(--c-line);
+  border-radius: 10px; font-size: 13.5px; }
+.c-saved li .meta { color: var(--c-ink-faint); font-size: 12px; }
+.c-note { font-size: 13px; color: var(--c-ink-faint); line-height: 1.55; }
+.c-toast { position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%); background: var(--c-ink); color: var(--c-bg); padding: 10px 18px;
+  border-radius: 999px; font-size: 14px; z-index: 50; }
+[dir='rtl'] .c-quote { border-left: 0; border-right: 4px solid var(--c-accent-2); }
+.cafe .sr-only { position: absolute; left: -9999px; top: 8px; }
+.cafe .sr-only:focus { left: 12px; z-index: 100; background: var(--c-card); padding: 8px 14px; border-radius: 999px; }
+/* buttons win over the generic .cafe a link colour */
+.cafe .c-btn, .cafe .c-btn:hover { color: #fff; }
+.cafe .c-btn.ghost, .cafe .c-btn.ghost:hover { color: var(--c-accent); }
+.cafe .c-lang, .cafe .c-lang:hover { color: var(--c-ink); }
+.cafe .site-nav a.active, .cafe .site-nav a.active:hover { color: #fff; }
+.c-slot input { font: inherit; font-size: 14.5px; padding: 9px 12px; border-radius: 10px; border: 1.5px solid var(--c-line); background: var(--c-card); color: var(--c-ink); width: 100%; box-sizing: border-box; }
+.c-slot input:focus { border-color: var(--c-accent-3); outline: none; }
+/* dark mode: the accent is light, so button text is dark (contrast) */
+.cafe[data-theme='dark'] .c-btn, .cafe[data-theme='dark'] .c-btn:hover,
+.cafe[data-theme='dark'] .site-nav a.active { color: #171c28; }
+.cafe[data-theme='dark'] .c-btn.ghost, .cafe[data-theme='dark'] .c-btn.ghost:hover { color: var(--c-accent); }
+@media (prefers-color-scheme: dark) {
+  .cafe:not([data-theme='light']) .c-btn, .cafe:not([data-theme='light']) .site-nav a.active { color: #171c28; }
+  .cafe:not([data-theme='light']) .c-btn.ghost { color: var(--c-accent); }
+}
